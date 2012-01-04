@@ -1,37 +1,56 @@
-# For normal builds; remove -DX11 -lX11 from flags if you don't have X11
 CC?=gcc
 EXE=ibniz
-CFLAGS=`sdl-config --libs --cflags` -Os
+OPTIMIZATION?=-O2
+OBJ=clipboard.o ui_sdl.o vm_slow.o
 
-# X11LIB
-CFLAGS+=-DX11 -lX11
+prefix:=/usr/local
+uname_S:=$(shell sh -c 'uname -s 2>/dev/null || echo not')
 
-ifeq (${DEBUG},yes)
-	CFLAGS+= -o0 -g
+CFLAGS=-std=c99 -lm
+LDFLAGS=-lm
+
+# SDL
+CFLAGS+=$(shell sh -c 'sdl-config --cflags')
+LDFLAGS+=$(shell sh -c 'sdl-config --libs')
+
+ifeq ($(uname_S),Linux)
+  # X11LIB
+  # For normal builds; remove -DX11 -lX11 from flags if you don't have X11
+  CFLAGS+=-DX11 -lX11
+  LDFLAGS+=-lX11
+  ifeq (${DEBUG},yes)
+  	CFLAGS+=-O0 -g
+  endif
+endif
+
+ifeq ($(uname_S),Darwin)
+  LDFLAGS+=-framework Cocoa
+endif
+
+ifeq (${uname_S},MINGW32_NT-5.1)
+  # For win32 builds using mingw32 (you'll probably need to modify these)
+  EXE=ibniz.exe
+  CFLAGS+=-lwinmm
+$(EXE): whole.c
+	${CC} ${CFLAGS} -s -ffast-math -fwhole-program whole.c -o $@
+
+whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
+	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
 endif
 
 all: ${EXE}
-
-# For win32 builds using mingw32 (you'll probably need to modify these)
-#CC=i586-mingw32msvc-gcc
-#EXE=ibniz.exe
-#FLAGS=-L./SDL-1.2.14/lib -I./SDL-1.2.14/include -static -lmingw32 SDL-1.2.14/lib/libSDL.a SDL-1.2.14/lib/libSDLmain.a -mwindows -lwinmm
-#all: ibniz.exe
 
 clean:
 	rm -f *.o *~ ibniz vmtest ibniz.exe whole.c
 
 package: clean
-	cd .. && tar czf ibniz-1.1.tar.gz ibniz-1.1/
+	tar -czf ibniz-1.1.tar.gz -C ../ ibniz-1.1/
 
-#$(EXE): whole.c
-#	$(CC) -s -O3 -ffast-math -fwhole-program whole.c -o $(EXE) $(FLAGS) -lm
+${EXE}: ${OBJ}
+	${CC} $^ ${LDFLAGS} -o ${EXE}
 
-#whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
-#	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
-
-${EXE}: ui_sdl.o vm_slow.o clipboard.o
-	${CC} ${CFLAGS} -lm -o ${EXE} $^
+vmtest: vm_test.o vm_slow.o
+	${CC} $^ ${LDFLAGS} -o $@
 
 ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
 clipboard.o: clipboard.c ibniz.h
@@ -42,5 +61,4 @@ font.i: font.pl
 runtest: vmtest
 	./vmtest
 
-vmtest: vm_test.c vm_slow.c
-	${CC} ${CFLAGS} -lm $@ $<
+.PHONY:clean package runtest
