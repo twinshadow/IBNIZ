@@ -1,41 +1,46 @@
-CC?=gcc
+CC:=gcc
 EXE=ibniz
-OPTIMIZATION?=-O2
+OPTIMIZATION:=-O2
 OBJ=clipboard.o ui_sdl.o vm_slow.o
 
 prefix:=/usr/local
 uname_S:=$(shell sh -c 'uname -s 2>/dev/null || echo not')
 
-CFLAGS=-std=c99 -lm
+CFLAGS=-std=c99
 LDFLAGS=-lm
 
 # SDL
 CFLAGS+=$(shell sh -c 'sdl-config --cflags')
 LDFLAGS+=$(shell sh -c 'sdl-config --libs')
 
-ifeq ($(uname_S),Linux)
-  # X11LIB
-  # For normal builds; remove -DX11 -lX11 from flags if you don't have X11
-  CFLAGS+=-DX11 -lX11
-  LDFLAGS+=-lX11
-  ifeq (${DEBUG},yes)
-  	CFLAGS+=-O0 -g
-  endif
-endif
-
 ifeq ($(uname_S),Darwin)
+  X11=no
   LDFLAGS+=-framework Cocoa
 endif
 
 ifeq (${uname_S},MINGW32_NT-5.1)
   # For win32 builds using mingw32 (you'll probably need to modify these)
   EXE=ibniz.exe
-  CFLAGS+=-lwinmm
+  CFLAGS+=-static
+  LDFLAGS+=-lwinmm
 $(EXE): whole.c
-	${CC} ${CFLAGS} -s -ffast-math -fwhole-program whole.c -o $@
+	${CC} ${CFLAGS} ${LDFLAGS} -s -ffast-math -fwhole-program whole.c -o $@
 
 whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
 	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
+else
+${EXE}: ${OBJ}
+	${CC} $^ ${LDFLAGS} -o ${EXE}
+
+endif
+
+ifneq (${X11},no)
+  CFLAGS+=-DX11 -lX11
+  LDFLAGS+=-lX11
+endif
+
+ifeq (${DEBUG},yes)
+CFLAGS+=-O0 -g
 endif
 
 all: ${EXE}
@@ -45,9 +50,6 @@ clean:
 
 package: clean
 	tar -czf ibniz-1.1.tar.gz -C ../ ibniz-1.1/
-
-${EXE}: ${OBJ}
-	${CC} $^ ${LDFLAGS} -o ${EXE}
 
 vmtest: vm_test.o vm_slow.o
 	${CC} $^ ${LDFLAGS} -o $@
