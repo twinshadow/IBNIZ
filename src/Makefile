@@ -1,6 +1,6 @@
 CC:=gcc
 EXE=ibniz
-OPTIMIZATION:=-O2
+OPTIMIZATION:=-Os
 OBJ=clipboard.o ui_sdl.o vm_slow.o
 VERSION=1.18
 
@@ -34,28 +34,32 @@ ifneq (${X11},no)
 endif
 
 ifeq (${DEBUG},yes)
-  CFLAGS+=-O0 -g
+  CFLAGS+=-g -O0
 else
-  CFLAGS+=-s
+  CFLAGS+=-s ${OPTIMIZATION}
 endif
 
 all: ${EXE}
 
 ${EXE}: ${OBJ}
-	${CC} $^ ${LDFLAGS} -o ${EXE}
+	${CC} ${CFLAGS} ${LDFLAGS} -o ${EXE} $^
 
 vmtest: vm_test.c vm_slow.o
-	${CC} $^ ${LDFLAGS} -o $@
+	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^
 
 clean:
 	rm -f *.o *~ ibniz vmtest ibniz.exe whole.c
 
 package: clean
-	tar -czf ibniz-${VERSION}.tar.gz -C ../ ibniz-${VERSION}/
-
+	cp -r ../src/ ../ibniz-${VERSION} &&\
+	tar -czf ../ibniz-${VERSION}.tar.gz -C ../ ibniz-${VERSION}/ &&\
+	rm -rf ../ibniz-${VERSION}
+.c.o:
+	${CC} -c ${CFLAGS} $< -o $@
 ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
 clipboard.o: clipboard.c ibniz.h
 vm_slow.o: vm_slow.c ibniz.h vm.h
+#	${CC} -c ${CFLAGS} -O3 $< -o $@
 font.i: font.pl
 	perl font.pl > font.i
 
