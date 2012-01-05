@@ -59,7 +59,7 @@ package: clean
 ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
 clipboard.o: clipboard.c ibniz.h
 vm_slow.o: vm_slow.c ibniz.h vm.h
-#	${CC} -c ${CFLAGS} -O3 $< -o $@
+	${CC} -c ${CFLAGS} -O3 $< -o $@
 font.i: font.pl
 	perl font.pl > font.i
 
