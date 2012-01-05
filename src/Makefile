@@ -2,6 +2,7 @@ CC:=gcc
 EXE=ibniz
 OPTIMIZATION:=-O2
 OBJ=clipboard.o ui_sdl.o vm_slow.o
+VERSION=1.18
 
 prefix:=/usr/local
 uname_S:=$(shell sh -c 'uname -s 2>/dev/null || echo not')
@@ -19,40 +20,38 @@ ifeq ($(uname_S),Darwin)
 endif
 
 ifeq (${uname_S},MINGW32_NT-5.1)
-  # For win32 builds using mingw32 (you'll probably need to modify these)
   EXE=ibniz.exe
-  CFLAGS+=-static
+  CFLAGS+=-static -ffast-math -fwhole-program
   LDFLAGS+=-lwinmm
-$(EXE): whole.c
-	${CC} ${CFLAGS} ${LDFLAGS} -s -ffast-math -fwhole-program whole.c -o $@
-
+  X11=no
 whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
 	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
-else
-${EXE}: ${OBJ}
-	${CC} $^ ${LDFLAGS} -o ${EXE}
-
 endif
 
 ifneq (${X11},no)
-  CFLAGS+=-DX11 -lX11
+  CFLAGS+=-DX11
   LDFLAGS+=-lX11
 endif
 
 ifeq (${DEBUG},yes)
-CFLAGS+=-O0 -g
+  CFLAGS+=-O0 -g
+else
+  CFLAGS+=-s
 endif
 
 all: ${EXE}
+
+${EXE}: ${OBJ}
+	${CC} $^ ${LDFLAGS} -o ${EXE}
+
+vmtest: vm_test.c vm_slow.o
+	${CC} $^ ${LDFLAGS} -o $@
 
 clean:
 	rm -f *.o *~ ibniz vmtest ibniz.exe whole.c
 
 package: clean
-	tar -czf ibniz-1.1.tar.gz -C ../ ibniz-1.1/
-
-vmtest: vm_test.o vm_slow.o
-	${CC} $^ ${LDFLAGS} -o $@
+	tar -czf ibniz-${VERSION}.tar.gz -C ../ ibniz-${VERSION}/
 
 ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
 clipboard.o: clipboard.c ibniz.h
