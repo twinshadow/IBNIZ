@@ -6,26 +6,25 @@ VERSION=1.18
 
 prefix:=/usr/local
 uname_S:=$(shell sh -c 'uname -s 2>/dev/null || echo not')
+uname_O:=$(shell sh -c 'uname -o 2>/dev/null || echo not')
 
 CFLAGS=-std=c99
 LDFLAGS=-lm
 
 # SDL
 CFLAGS+=$(shell sh -c 'sdl-config --cflags')
-LDFLAGS+=$(shell sh -c 'sdl-config --libs')
+LDFLAGS+=$(shell sh -c 'sdl-config --static-libs')
 
-ifeq ($(uname_S),Darwin)
+ifeq (${uname_S},Darwin)
   X11=no
   LDFLAGS+=-framework Cocoa
 endif
 
-ifeq (${uname_S},MINGW32_NT-5.1)
+ifeq (${uname_O},Msys)
   EXE=ibniz.exe
-  CFLAGS+=-static -ffast-math -fwhole-program
-  LDFLAGS+=-lwinmm
+  CFLAGS=-ffast-math -fwhole-program
+  LDFLAGS=-static
   X11=no
-whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
-	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
 endif
 
 ifneq (${X11},no)
@@ -34,18 +33,19 @@ ifneq (${X11},no)
 endif
 
 ifeq (${DEBUG},yes)
-  CFLAGS+=-g -O0
+  CFLAGS+=-g
+  OPTIMIZATION=-O0
 else
-  CFLAGS+=-s ${OPTIMIZATION}
+  CFLAGS+=-s
 endif
 
 all: ${EXE}
 
 ${EXE}: ${OBJ}
-	${CC} ${CFLAGS} ${LDFLAGS} -o ${EXE} $^
+	${CC} ${CFLAGS} ${LDFLAGS} ${OPTIMIZATION} -o ${EXE} $^
 
 vmtest: vm_test.c vm_slow.o
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^
+	${CC} ${CFLAGS} ${LDFLAGS} ${OPTIMIZATION} -o $@ $^
 
 clean:
 	rm -f *.o *~ ibniz vmtest ibniz.exe whole.c
@@ -59,7 +59,7 @@ package: clean
 ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
 clipboard.o: clipboard.c ibniz.h
 vm_slow.o: vm_slow.c ibniz.h vm.h
-	${CC} -c ${CFLAGS} -O3 $< -o $@
+	${CC} -c ${CFLAGS} ${LDFLAGS} -O3 $< -o $@
 font.i: font.pl
 	perl font.pl > font.i
 
