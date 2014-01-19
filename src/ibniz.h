@@ -9,6 +9,8 @@
 #  define GLOBAL extern
 #endif
 
+#define IBNIZ_VERSION "1.1C00-NORELEASE"
+
 #include "vm.h"
 
 /* i/o stuff used by vm */
