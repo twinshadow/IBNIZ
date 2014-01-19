@@ -1,4 +1,5 @@
 #ifndef VM_H
+#define VM_H
 
 #define MEMSIZE 0x100000
 #define MAXCODESIZE 4096
