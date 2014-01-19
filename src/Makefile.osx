@@ -1,2 +1,3 @@
 CC=	clang
+X11=
 include	Makefile.in

@@ -1,53 +1,22 @@
-# For normal builds; remove -DX11 -lX11 from flags if you don't have X11
-CC=gcc
-EXE=ibniz
-FLAGS=`sdl-config --libs --cflags` -DX11 -lX11
-all: ibniz
+uname_S:=$(shell uname -s)
+uname_O:=$(shell uname -o)
 
-# For win32 builds using mingw32 (you'll probably need to modify these)
-#CC=i586-mingw32msvc-gcc
-#EXE=ibniz.exe
-#FLAGS=-L./SDL-1.2.14/lib -I./SDL-1.2.14/include -static -lmingw32 SDL-1.2.14/lib/libSDL.a SDL-1.2.14/lib/libSDLmain.a -mwindows -lwinmm
-#all: ibniz.exe
+# maybe works
+PLATFORM=	Makefile.in
 
-clean:
-	rm -f *.o *~ ibniz vmtest ibniz.exe whole.c
+# Define this for custom target platforms
+TARGET=
 
-package: clean
-	cd .. && cp -R src ibniz-1.18 && tar czf ibniz-1.18.tar.gz ibniz-1.18
+ifeq (${uname_S}, Linux)
+PLATFORM=	Makefile.in
+endif
 
-winexe: clean
-	cp * ../winbuild && cd ../winbuild && make -f Makefile.win
+ifeq (${uname_S}, Darwin)
+PLATFORM=	Makefile.osx
+endif
 
-#$(EXE): whole.c
-#	$(CC) -s -O3 -ffast-math -fwhole-program whole.c -o $(EXE) $(FLAGS) -lm
+ifeq (${uname_O}, Msys)
+PLATFORM=	Makefile.win
+endif
 
-#whole.c: vm_slow.c ui_sdl.c clipboard.c texts.i font.i vm.h ibniz.h
-#	cat ui_sdl.c vm_slow.c clipboard.c > whole.c
-
-$(EXE): ui_sdl.o vm_slow.o clipboard.o compiler.o
-	$(CC) -Os -s ui_sdl.o vm_slow.o clipboard.o compiler.o -o $(EXE) $(FLAGS) -lm
-
-ui_sdl.o: ui_sdl.c ibniz.h font.i vm.h texts.i vm.h
-	$(CC) -c -Os ui_sdl.c -o ui_sdl.o $(FLAGS)
-
-clipboard.o: clipboard.c ibniz.h
-	$(CC) -c -Os clipboard.c -o clipboard.o $(FLAGS)
-
-compiler.o: compiler.c ibniz.h vm.h
-	$(CC) -c -Os compiler.c -o compiler.o $(FLAGS)
-
-vm_slow.o: vm_slow.c ibniz.h vm.h
-	$(CC) -c -O3 vm_slow.c -o vm_slow.o
-
-font.i: font.pl
-	perl font.pl > font.i
-
-runtest: vmtest
-	./vmtest
-
-vmtest: vm_test.c vm_slow.c
-	gcc vm_test.c vm_slow.o -o vmtest -lm
-
-ibniz2c: ibniz2c.c compiler.c gen_c.c
-	gcc -DIBNIZ2C -Os compiler.c ibniz2c.c -o ibniz2c -lm
+include		${PLATFORM}

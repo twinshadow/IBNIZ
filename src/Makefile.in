@@ -2,25 +2,38 @@ CC?=		gcc
 EXE?=		ibniz
 SRC=		ui_sdl.c vm_slow.c clipboard.c compiler.c
 OBJ=		$(SRC:.c=.o)
-INT=		font.i texts.i
-OPTIMIZATION=	-Os
+PROG=		${EXE} vmtest ibniz2c
+INTER=		font.i texts.i
 PERL?=		perl
 RM_F?=		rm -f
-SDL_LDFLAGS?=	$(shell sdl-config --libs)
-SDL_CFLAGS?=	$(shell sdl-config --cflags)
-CFLAGS:=	${OPTIMIZATION} -Wall ${SDL_CFLAGS}
-LDFLAGS:=	${SDL_LDFLAGS} -lm ${SDL_LDFLAGS}
+SDL_LDFLAGS:=	$(shell sdl-config --libs)
+SDL_CFLAGS:=	$(shell sdl-config --cflags)
+CFLAGS+=	-Wall -Werror ${SDL_CFLAGS}
+LDFLAGS+=	-lm ${SDL_LDFLAGS}
+
+ifdef DEBUG
+CFLAGS+=	-g
+OPTIMIZATION=	-O0
+else
+OPTIMIZATION=	-Os
+endif
+
+ifdef X11
+CFLAGS+=	-DX11
+LDFLAGS+=	-lX11
+endif
 
 all: ${EXE}
 
 %.o: %.c
-	${CC} ${CFLAGS} -c -o $@ $^
+	${CC} ${CFLAGS} ${OPTIMIZATION} -c -o $@ $^
 
-${EXE}: ${OBJ}
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^
+vm_slow.o: OPTIMIZATION= -O3
 
-vmtest: ${OBJ}
-	${CC} ${CFLAGS} ${LDFLAGS} -o $@ $^
+${PROG}: ${OBJ}
+	${CC} ${CFLAGS} ${OPTIMIZATION} ${LDFLAGS} -o $@ $^
+
+ibniz2c: CFLAGS+= -DIBNIZ2C
 
 font.i: font.pl
 	${PERL} font.pl > font.i
@@ -31,4 +44,4 @@ runtest: vmtest
 clean:
 	${RM_F} *.o *~ ibniz vmtest ibniz.exe whole.c
 
-.PHONY: clean
+.PHONY: clean runtest
