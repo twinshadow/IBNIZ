@@ -11,7 +11,23 @@
 
 #define IBNIZ_VERSION "1.1C00-NORELEASE"
 
+#ifdef VERBOSE
+#define DEBUG(__msg, ...) fprintf(stderr, "DEBUG: %s:%d: " __msg "\n", \
+		__FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#define DEBUG(__msg, ...)
+#endif
+
 #include "vm.h"
+
+#define WIDTH 256
+#define EDITBUFSZ (65536*2)
+
+#ifndef WIN32
+#define PLAYBACKGAP 4
+#else
+#define PLAYBACKGAP 16
+#endif
 
 /* i/o stuff used by vm */
 
