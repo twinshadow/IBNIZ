@@ -4,68 +4,66 @@
 #define MAXCODESIZE 4096
 #define MAXDATASIZE 4096
 
-GLOBAL struct
-{
-  /* main register set */
+GLOBAL struct {
+	/* main register set */
 
-    char  *ip;
-   int32_t*stack;
-  uint32_t sp;
-  uint32_t stackmask;
+	char *ip;
+	int32_t *stack;
+	uint32_t sp;
+	uint32_t stackmask;
 
-  uint32_t*rstack;
-  uint32_t rsp;
-  uint32_t rstackmask;
+	uint32_t *rstack;
+	uint32_t rsp;
+	uint32_t rstackmask;
 
-  /* parallel register set */
+	/* parallel register set */
 
-   int32_t*costack;
-  uint32_t cosp;
-  uint32_t costackmask;
-  
-  uint32_t*corstack;
-  uint32_t corsp;
-  uint32_t corstackmask;
+	int32_t *costack;
+	uint32_t cosp;
+	uint32_t costackmask;
 
-  /* i/o stuff */
+	uint32_t *corstack;
+	uint32_t corsp;
+	uint32_t corstackmask;
 
-  char     mediacontext; /* 0=video, 1=audio, 2=stdio */
-  char     videomode;    /* 0=txy, 1=t */
-  char     audiomode;    /* 0=mono, 1=stereo */
-  char     preferredmediacontext;
-  char     visiblepage;
-  char     stopped;
-  uint32_t videotime;
-  uint32_t audiotime;
-  uint32_t userinput;
+	/* i/o stuff */
 
-  /* vm_slow-specific */
+	char mediacontext;	/* 0=video, 1=audio, 2=stdio */
+	char videomode;		/* 0=txy, 1=t */
+	char audiomode;		/* 0=mono, 1=stereo */
+	char preferredmediacontext;
+	char visiblepage;
+	char stopped;
+	uint32_t videotime;
+	uint32_t audiotime;
+	uint32_t userinput;
 
-  char specialcontextstep;
-  void(*pmv_func)();
-  
-  /* dynamic stack balance detection */
+	/* vm_slow-specific */
 
-  uint32_t prevsp[2];
-  uint32_t prevstackval[2];
-  int      currentwcount[2];
-  int16_t  spchange[2];
-  int      wcount[2];
+	char specialcontextstep;
+	void (*pmv_func) ();
 
-  /* memory */
+	/* dynamic stack balance detection */
 
-  int32_t  mem[MEMSIZE];
-  int      codelgt;
-  int      datalgt;
-  int      dataptr;
-  uint32_t parsed_data[MAXDATASIZE];
+	uint32_t prevsp[2];
+	uint32_t prevstackval[2];
+	int currentwcount[2];
+	int16_t spchange[2];
+	int wcount[2];
 
-  /* compiler-related (also directly executed by vm_slow) */
+	/* memory */
 
-  char parsed_code[MAXCODESIZE];
-  uint32_t parsed_hints[MAXCODESIZE];
+	int32_t mem[MEMSIZE];
+	int codelgt;
+	int datalgt;
+	int dataptr;
+	uint32_t parsed_data[MAXDATASIZE];
+
+	/* compiler-related (also directly executed by vm_slow) */
+
+	char parsed_code[MAXCODESIZE];
+	uint32_t parsed_hints[MAXCODESIZE];
 } vm;
-
 #endif
 
 #define OP_LOADIMM '0'

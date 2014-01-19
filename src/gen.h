@@ -4,8 +4,8 @@
 /*** functions implemented for compilation targets: ***/
 
 void gen_nativeinit();
-void* gen_nativefinish();
-void gen_nativerun(void*a);
+void *gen_nativefinish();
+void gen_nativerun(void *a);
 
 /* reg moves */
 
@@ -64,12 +64,12 @@ void gen_push_imm(int32_t i);
 void gen_pop_reg(int t);
 void gen_pop_noreg();
 void gen_dup_reg(int t);
-void gen_pick_reg_reg(int t,int i);
-void gen_pick_reg_imm(int t,int32_t i);
-void gen_bury_regreg(int t,int s);
-void gen_bury_reg_imm(int t,int32_t s);
-void gen_bury_imm_reg(int32_t i,int s);
-void gen_bury_imm_imm(int32_t i,int32_t s);
+void gen_pick_reg_reg(int t, int i);
+void gen_pick_reg_imm(int t, int32_t i);
+void gen_bury_regreg(int t, int s);
+void gen_bury_reg_imm(int t, int32_t s);
+void gen_bury_imm_reg(int32_t i, int s);
+void gen_bury_imm_imm(int32_t i, int32_t s);
 
 /* rstack */
 
@@ -80,17 +80,17 @@ void gen_rpop_reg_reg(int t);
 
 /* conditionals */
 
-//void gen_cmp_reg_reg(int r0,int r1);
-//void gen_cmp_reg_imm(int r,uint32_t i);
+//void gen_cmp_reg_reg(int r0, int r1);
+//void gen_cmp_reg_imm(int r, uint32_t i);
 //void gen_test_reg(int r);
-// blt_reg_reg_lab
+//blt_reg_reg_lab
 // bgt_reg_reg_lab
 // btestnz_reg_reg_lab
 // btestnz_reg_
-// ...
+//...
 
-void gen_beq_reg_lab(int s,int l);
-void gen_bne_reg_lab(int s,int l);
+void gen_beq_reg_lab(int s, int l);
+void gen_bne_reg_lab(int s, int l);
 void gen_beq_reg_rstack(int s);
 void gen_bne_reg_rstack(int s);
 /* not used */
