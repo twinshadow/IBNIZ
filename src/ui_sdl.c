@@ -42,9 +42,6 @@ struct {
 	int subframe;
 	char audiopaused;
 } dumper;
-#define WIDTH 256
-
-#define EDITBUFSZ (65536*2)
 
 struct {
 	char *cursor;
@@ -60,13 +57,6 @@ uint8_t font[] =
 {
 #include "font.i"
 };
-#ifndef WIN32
-#define PLAYBACKGAP 4
-#else
-#define PLAYBACKGAP 16
-#endif
-
-#define DEBUG
 
 /*** rendering of videostack and osd ***/
 
@@ -201,13 +191,13 @@ void showyuv()
 void updatescreen()
 {
 	int x, y;
-	uint32_t *s = vm.mem + 0xE0000 + (vm.visiblepage << 16);
+	uint32_t *s = (uint32_t*)(vm.mem + 0xE0000 + (vm.visiblepage << 16));
 
 	for (y = 0; y < 256; y++)
 		for (x = 0; x < 128; x++) {
 			uint32_t b = s[0], a = s[1];
 
-	//little_endian, TODO:support big - endian
+	/* little_endian, TODO:support big - endian */
 			    a = (a & 0xff000000) |
 			    ((a << 8) & 0x00ff0000) |
 			    ((b >> 8) & 0x0000ffff);
@@ -316,13 +306,15 @@ void updateaudio(void *dum, uint8_t * d0, int lgt)
 
 void scheduler_check()
 {
-	/* audiotime incs by 1 per frametick auplaytime incs by 1<<16 per
-	   frametick auplayptr incs by 1<<32 per 1<<22-inc of auplaytime */
+	/* audiotime incs by 1 per frametick
+	 * auplaytime incs by 1<<16 per
+	 * frametick auplayptr incs by 1<<32 per 1<<22-inc of auplaytime
+	 */
 	uint32_t playback_at = ui.auplaytime + (ui.auplayptr >> 10);
 	uint32_t auwriter_at = vm.audiotime * 65536 + vm.prevsp[1] * 64;
 
 	if ((vm.prevsp[1] > 0) && playback_at > auwriter_at) {
-		DEBUG(stderr, "%x > %x! (sp %x & %x) jumping forward\n", playback_at, auwriter_at,
+		DEBUG("%x > %x! (sp %x & %x) jumping forward\n", playback_at, auwriter_at,
 		      vm.sp, vm.cosp);
 		vm.audiotime = ((ui.auplaytime >> 16) & ~63) + 64;
 		vm.preferredmediacontext = 1;
@@ -335,7 +327,7 @@ void scheduler_check()
 void checkmediaformats()
 {
 	if (vm.wcount[1] != 0 && vm.spchange[1] <= 0) {
-		DEBUG(stderr, "audio stack underrun; shut it off!\n");
+		DEBUG("audio stack underrun; shut it off!\n");
 		ui.audio_off = 1;
 		vm.spchange[1] = vm.wcount[1] = 0;
 		pauseaudio(1);
@@ -346,14 +338,14 @@ void checkmediaformats()
 	//t - video in tyx - video mode produces 2 words extra per wcount
 	    if ((vm.videomode == 0) && (vm.spchange[0] - vm.wcount[0] * 2 == 1)) {
 		vm.videomode = 1;
-		DEBUG(stderr, "switched to t-video (sp changed by %d with %d w)\n",
+		DEBUG("switched to t-video (sp changed by %d with %d w)\n",
 		      vm.spchange[0], vm.wcount);
 	} else if ((vm.videomode == 1) && (vm.spchange[0] + vm.wcount[0] * 2 == 1)) {
 		vm.videomode = 0;
-		DEBUG(stderr, "switched to tyx-video");
+		DEBUG("switched to tyx-video");
 	}
 	if ((vm.videomode == 1) && (vm.spchange[1] + vm.wcount[1] * 2 == 1)) {
-		DEBUG(stderr, "A<=>V detected!\n");
+		DEBUG("A<=>V detected!\n");
 		switchmediacontext();
 		vm.videomode = 0;
 		/* prevent loop */
@@ -686,7 +678,7 @@ void ed_save()
 		fn = strdup("untitled.ib");
 	}
 	f = fopen(fn, "w");
-	DEBUG(stderr, "filename: %s\n", fn);
+	DEBUG("filename: %s\n", fn);
 	if (!f)
 		inserttosrc("\\ ERROR: couldn't save file!\n");
 	else {
@@ -781,7 +773,7 @@ char *ed_getprogbuf()
 void interactivemode(char *codetoload)
 {
 	int codechanged = 0;
-	uint32_t prevtimevalue = gettimevalue();
+	uint32_t prevtimevalue = gettimevalue() - 1;
 	SDL_Event e;
 
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, 10);
@@ -809,7 +801,7 @@ void interactivemode(char *codetoload)
 			updatescreen();
 			vm.specialcontextstep = 3;
 			prevtimevalue = t;
-			DEBUG(stderr, "t:%x audio:%x playback:%x video:%x\n",
+			DEBUG("t:%x audio:%x playback:%x video:%x\n",
 			      t, (vm.audiotime) + (((vm.mediacontext == 1) ? vm.sp : vm.cosp) >> 10)
 			      ,(ui.auplaytime >> 16) + (ui.auplayptr >> 26), vm.videotime);
 		} {
@@ -908,7 +900,6 @@ void interactivemode(char *codetoload)
 				pauseaudio(ui.runstat ^ 1);
 			} else if (ui.osd_visible) {
 				/* editor keys */
-
 				if (sym == SDLK_UP && (mod & KMOD_CTRL)) {
 					ed_increment(ed.cursor);
 					codechanged = 1;
@@ -1041,8 +1032,7 @@ int main(int argc, char **argv)
 			FILE *f = fopen(s, "r");
 			char buf[EDITBUFSZ + 1];
 			int hdrlgt, buflgt;
-			//if (codetoload)
-				free(codetoload);
+			/* if (codetoload) free(codetoload); */
 			if (!f) {
 				fprintf(stderr, "Can't load file '%s'\n", s);
 				exit(1);
@@ -1075,7 +1065,7 @@ int main(int argc, char **argv)
 		as.samples = 512;
 		as.callback = updateaudio;
 		SDL_OpenAudio(&as, NULL);
-		DEBUG(stderr, "buffer size: %d\n", as.samples);
+		DEBUG("buffer size: %d\n", as.samples);
 	}
 
 	vm_compile(codetoload);
@@ -1088,4 +1078,5 @@ int main(int argc, char **argv)
 	interactivemode(codetoload);
 
 	SDL_Quit();
+	return 0;
 }
