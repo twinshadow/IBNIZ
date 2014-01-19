@@ -4,9 +4,6 @@
 #include <string.h>
 #include "ibniz.h"
 
-#define MOVESP(steps) vm.sp=(vm.sp+(steps))&vm.stackmask
-#define MOVERSP(steps) vm.rsp=(vm.rsp+(steps))&vm.rstackmask
-
 void pmv_setfunc();
 
 uint32_t getdatabits(int n)
@@ -47,23 +44,21 @@ void vm_compile(char *src)
 void vm_init()
 {
 	/* video context */
-
 	vm.stack = vm.mem + 0xE0000;
 	vm.stackmask = 0x1ffff;
 	vm.sp = 0;
 
-	vm.rstack = vm.mem + 0xCC000;
+	vm.rstack = (uint32_t*)(vm.mem + 0xCC000);
 	vm.rstackmask = 0x3FFF;
 	vm.rsp = 0;
 
 	/* audio context */
-
 	vm.costack = vm.mem + 0xD0000;
 	vm.costackmask = 0xffff;
 	vm.cosp = 1;
-	//to avoid audio skipping bug at start
 
-	    vm.corstack = vm.mem + 0xC8000;
+	/* to avoid audio skipping bug at start */
+	vm.corstack = (uint32_t*)(vm.mem + 0xC8000);
 	vm.corstackmask = 0x3FFF;
 	vm.corsp = 0;
 
@@ -220,7 +215,7 @@ void pushmediavariables()
 		//fprintf(stderr, "%x\n", vm.stack[vm.sp]);
 	}
 }
-#define CYCLESPERRUN 10223
+
 int vm_run()
 {
 	int cycles;

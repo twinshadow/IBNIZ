@@ -4,10 +4,11 @@
 #define MEMSIZE 0x100000
 #define MAXCODESIZE 4096
 #define MAXDATASIZE 4096
+#define CYCLESPERRUN 10223
+#define OP_LOADIMM '0'
 
 GLOBAL struct {
 	/* main register set */
-
 	char *ip;
 	int32_t *stack;
 	uint32_t sp;
@@ -18,7 +19,6 @@ GLOBAL struct {
 	uint32_t rstackmask;
 
 	/* parallel register set */
-
 	int32_t *costack;
 	uint32_t cosp;
 	uint32_t costackmask;
@@ -28,24 +28,21 @@ GLOBAL struct {
 	uint32_t corstackmask;
 
 	/* i/o stuff */
-
-	char mediacontext;	/* 0=video, 1=audio, 2=stdio */
-	char videomode;		/* 0=txy, 1=t */
-	char audiomode;		/* 0=mono, 1=stereo */
-	char preferredmediacontext;
-	char visiblepage;
-	char stopped;
+	uint8_t mediacontext;	/* 0=video, 1=audio, 2=stdio */
+	uint8_t videomode;		/* 0=txy, 1=t */
+	uint8_t audiomode;		/* 0=mono, 1=stereo */
+	uint8_t preferredmediacontext;
+	uint8_t visiblepage;
+	uint8_t stopped;
 	uint32_t videotime;
 	uint32_t audiotime;
 	uint32_t userinput;
 
 	/* vm_slow-specific */
-
 	char specialcontextstep;
 	void (*pmv_func) ();
 
 	/* dynamic stack balance detection */
-
 	uint32_t prevsp[2];
 	uint32_t prevstackval[2];
 	int currentwcount[2];
@@ -53,7 +50,6 @@ GLOBAL struct {
 	int wcount[2];
 
 	/* memory */
-
 	int32_t mem[MEMSIZE];
 	int codelgt;
 	int datalgt;
@@ -61,13 +57,9 @@ GLOBAL struct {
 	uint32_t parsed_data[MAXDATASIZE];
 
 	/* compiler-related (also directly executed by vm_slow) */
-
 	char parsed_code[MAXCODESIZE];
 	uint32_t parsed_hints[MAXCODESIZE];
 } vm;
-#endif
-
-#define OP_LOADIMM '0'
 
 #define ROL(a,s)   ((((uint32_t)(a))<<(s))|(((uint32_t)(a))>>(32-(s))))
 #define ROR(a,s)   ((((uint32_t)(a))>>(s))|(((uint32_t)(a))<<(32-(s))))
@@ -87,4 +79,9 @@ GLOBAL struct {
 #define IBNIZ_ISPOS(a)  ((a)>0?(a):0)
 #define IBNIZ_ISZERO(a) ((a)==0?0x10000:0)
 
+#define MOVESP(steps) vm.sp=(vm.sp+(steps))&vm.stackmask
+#define MOVERSP(steps) vm.rsp=(vm.rsp+(steps))&vm.rstackmask
+
 #define SWAP(t,a,b) { t tmp=(a);(a)=(b);(b)=tmp; }
+
+#endif /* VM_H */
