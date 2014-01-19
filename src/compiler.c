@@ -20,7 +20,7 @@ void compiler_parse(char *src)
 	uint32_t *hd = vm.parsed_hints;
 	uint32_t num;
 	char *s, nummode = 0, shift = 0;
-	int i, j;
+	int i;
 	s = src;
 
 	/* parse immediates, skip comments & whitespaces */
@@ -161,7 +161,7 @@ void compiler_parse(char *src)
 	/* precalculate skip points */
 	vm.codelgt = d - vm.parsed_code;
 	for (i = 0;; i++) {
-		int j = i + 1, seek0 = 0, seek1 = 0, seek2 = 0;
+		int j = i + 1, seek0 = 0, seek1 = 0;
 		char a = vm.parsed_code[i];
 		if (a == '\0') {
 			seek0 = 'M';
