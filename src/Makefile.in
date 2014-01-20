@@ -1,6 +1,6 @@
 CC?=		gcc
 EXE?=		ibniz
-SRC=		ui_sdl.c vm_slow.c clipboard.c compiler.c
+SRC=		vm_slow.c clipboard.c compiler.c
 OBJ=		$(SRC:.c=.o)
 PROG=		${EXE} vmtest ibniz2c
 INTER=		font.i texts.i
@@ -33,7 +33,9 @@ vm_slow.o: OPTIMIZATION= -O3
 ${PROG}: ${OBJ}
 	${CC} ${CFLAGS} ${OPTIMIZATION} ${LDFLAGS} -o $@ $^
 
+ibniz: ui_sdl.o
 ibniz2c: CFLAGS+= -DIBNIZ2C
+vmtest: vm_test.o
 
 font.i: font.pl
 	${PERL} font.pl > font.i
