@@ -1,5 +1,6 @@
 #define IBNIZ_MAIN
 #include <sys/time.h>
+#include <inttypes.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,11 +68,11 @@ void runtest(char *code, uint32_t correct_stacktop)
 		printf(
 		    "code: \"%s\"\n"
 		    "frames: %zu\n"
-		    "compile: %lu.%u\n"
-		    "run: %lu.%u\n\n",
+		    "compile: %" PRIu32 ".%" PRIu32 "\n"
+		    "run: %" PRIu32 ".%" PRIu32 "\n\n",
 			code, frame_count,
-			compile_time[2].tv_sec, compile_time[2].tv_usec,
-			run_time[2].tv_sec, run_time[2].tv_usec);
+			(uint32_t)compile_time[2].tv_sec, (uint32_t)compile_time[2].tv_usec,
+			(uint32_t)run_time[2].tv_sec, (uint32_t)run_time[2].tv_usec);
 	}
 }
 
