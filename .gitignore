@@ -1,0 +1,11 @@
+# Executables
+ibniz
+ibniz2c
+vmtest
+
+# Objects
+*.o
+
+# Clang
+*.plist
+*.gch
