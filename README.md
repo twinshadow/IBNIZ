@@ -1,10 +1,9 @@
-
 Compilation in Unix-like systems that have GCC and SDL installed: make
 
 This documentation represents IBNIZ version 1.18 released on 2012-01-04.
 The distribution licence is the "zlib/libpng licence" (see licence.txt).
 
-=== OVERVIEW ===
+### OVERVIEW ###
 
 IBNIZ is a virtual machine designed for extremely compact low-level
 audiovisual programs. The leading design goal is usefulness as a platform
@@ -30,7 +29,7 @@ flavor of an esoteric programming language.
 NOTE: IBNIZ has not been fully defined or implemented yet! Anything
 mentioned in this document may change (although major changes are unlikely).
 
-=== QUICK TUTORIAL ===
+### QUICK TUTORIAL ###
 
 The primary implementation of IBNIZ is interactive. You can edit the code
 like in a normal text editor, start/pause it with f1 and restart it with f2.
@@ -106,7 +105,7 @@ recursion. It is also possible to ignore the exterior loop altogether and
 write to the buffers like to any random access memory as well as to read
 user input and to have a separate data segment for any arbitrary data.
 
-=== TECHNICAL NUMBERS** ===
+### TECHNICAL NUMBERS** ###
 
 Technical specs of the default configuration:
 
@@ -116,27 +115,26 @@ Video output: 256x256 pixels at 60 Hz, 32 bits per pixel (VVUU.YYYY)
 Audio output: 61440 Hz mono (30720 Hz stereo), 16 bits per sample
 Computation speed: not defined yet (fully depends on underlying hardware)
 
-=== FULL INSTRUCTION SET ===
+### FULL INSTRUCTION SET ###
 
 Everything is case-sensitive here!
 
-NUMBERS
+##### NUMBERS #####
 
         symbol  name    stack
         ------  ----    -----
         0-F.    loadimm (-- val)
 
-        The basic numeric type is the 32-bit fixed-point number, divided
-        into 16 bits of integer and 16 bits of fraction.
+The basic numeric type is the 32-bit fixed-point number, divided
+into 16 bits of integer and 16 bits of fraction.
 
-        The number format in the source code is upper-case hexadecimal using
-        the digits 0-9 and A-F. The separator '.' can be used to separate
-        the fraction part from the integer part.
+The number format in the source code is upper-case hexadecimal using
+the digits 0-9 and A-F. The separator '.' can be used to separate
+the fraction part from the integer part.
 
-        Several immediate numbers can be separated with a blank or comma
-        (',').
+Several immediate numbers can be separated with a blank or comma (',').
 
-ARITHMETIC
+##### ARITHMETIC #####
 
         symbol  name    stack
         ------  ----    -----
@@ -161,12 +159,12 @@ ARITHMETIC
         >       ispos   (a -- a if a>0, else 0)
         =       iszero  (a -- 1 if a==0, else 0)
 
-        All numbers used in arithmetic are interpreted as signed 16+16-bit
-        fixed-point values (negative numbers in two's complement).
+All numbers used in arithmetic are interpreted as signed 16+16-bit
+fixed-point values (negative numbers in two's complement).
 
-        The modulus (%) uses fractions.
+The modulus (%) uses fractions.
 
-STACK MANIPULATION
+##### STACK MANIPULATION #####
 
         symbol  name            stack            description
         ------  ----            -----            ----------
@@ -177,12 +175,12 @@ STACK MANIPULATION
         )       pick            (i -- val)       load value from STACK[top-1-i]
         (       bury            (val i --)       store value to STACK[top-2-i]
 
-        The operations 'pick' and 'bury' and 'movesp' are always wrapped
-        within the stack range.
+The operations 'pick' and 'bury' and 'movesp' are always wrapped
+within the stack range.
 
-        The symbol 'v' was chosen because it resembles a triangle.
+The symbol 'v' was chosen because it resembles a triangle.
 
-EXTERIOR LOOP
+##### EXTERIOR LOOP #####
 
         symbol  name            description
         ------  ----            -----------
@@ -190,13 +188,13 @@ EXTERIOR LOOP
         w       whereami        pushes exterior loop variable(s) on stack
         T       terminate       stops program execution
 
-        The execution starts in the video context. When the execution wraps
-        from the end of the program to the beginning, the VM implicitly
-        executes 'mediaswitch' and 'whereami'.
+The execution starts in the video context. When the execution wraps
+from the end of the program to the beginning, the VM implicitly
+executes 'mediaswitch' and 'whereami'.
 
-        The loop variables pushed by 'whereami' depend on the stack pointer
-        and internal video/audio frame counters. The exact operation,
-        depending on context and mode, is as follows:
+The loop variables pushed by 'whereami' depend on the stack pointer
+and internal video/audio frame counters. The exact operation,
+depending on context and mode, is as follows:
 
         context  mode  pushes on stack
         -------  ----  ---------------
@@ -216,28 +214,28 @@ EXTERIOR LOOP
                        - the integer is the frame counter (same as in video)
                        - the fraction is, well, the 65536th part thereof
 
-        The current implementation changes the video context mode
-        automatically based on stack balance and how many times 'whereami'
-        is called.
+The current implementation changes the video context mode
+automatically based on stack balance and how many times 'whereami'
+is called.
 
-MEMORY MANIPULATION
+##### MEMORY MANIPULATION #####
 
         symbol  name    stack
         ------  ----    -----
         @       load    (addr -- val)
         !       store   (val addr --)
 
-        All the memory is addressed in 32-bit-wide chunks. There is no
-        byte-level operation.
+All the memory is addressed in 32-bit-wide chunks. There is no
+byte-level operation.
 
-        The fractional part of the memory address is interpreted as the high
-        part of the logical address. (e.g. 1234.FFFF refers to the address
-        FFFF1234).
+The fractional part of the memory address is interpreted as the high
+part of the logical address. (e.g. 1234.FFFF refers to the address
+FFFF1234).
 
-        In the default configuration, the top 12 bits of the address are
-        ignored (thus, the actual address in the previous example is F1234). 
-        The total address space is therefore 1 megaword == 4 megabytes. It
-        is divided as follows:
+In the default configuration, the top 12 bits of the address are
+ignored (thus, the actual address in the previous example is F1234). 
+The total address space is therefore 1 megaword == 4 megabytes. It
+is divided as follows:
 
         00000 - BFFFF   free for user data
         C0000 - C7FFF   reserved for internal registers, code, etc.
@@ -247,9 +245,9 @@ MEMORY MANIPULATION
         E0000 - EFFFF   video stack page 0
         F0000 - FFFFF   video stack page 1
 
-PROGRAM CONTROL
+##### PROGRAM CONTROL #####
 
-   Conditional execution
+  *Conditional execution*
 
         symbol  name    description
         ------  ----    -----------
@@ -257,9 +255,9 @@ PROGRAM CONTROL
         :       else    skip until after next 'endif'
         ;       endif   nop; marks end of conditional block when skipping
 
-        End of code is also regarded as a skip terminator in all cases.
+End of code is also regarded as a skip terminator in all cases.
 
-   Loops
+  *Loops*
 
         symbol  name    description
         ------  ----    -----------
@@ -271,22 +269,22 @@ PROGRAM CONTROL
         ]       while (cond --) jump back if cond!=0
         J       jump    (v --)  set instruction pointer to value v
 
-        Examples of loop constructs:
+Examples of loop constructs:
 
         100X 3i@L       stores the number '3' to addresses 1..100
         [1r dA0-<]      shifts number right until it is below A0
 
-        The jump instruction (like all ops that manipulate instruction
-        pointer directly) wraps around the code length (it is not possible
-        to jump outside the program space). As the internal encoding of
-        programs has not been defined yet, the exact addresses of the
-        instructions are implementation-dependent.
+The jump instruction (like all ops that manipulate instruction
+pointer directly) wraps around the code length (it is not possible
+to jump outside the program space). As the internal encoding of
+programs has not been defined yet, the exact addresses of the
+instructions are implementation-dependent.
 
-        The times-loop counters (i and j) are regarded as 32-bit unsigned
-        integers in the same way as memory addresses (.0001 = 10000). Thus,
-        times-loops with more than 65535 steps are possible.
+The times-loop counters (i and j) are regarded as 32-bit unsigned
+integers in the same way as memory addresses (.0001 = 10000). Thus,
+times-loops with more than 65535 steps are possible.
 
-   Subroutines
+  *Subroutines*
 
         symbol  name    stack   description
         ------  ----    -----   -----------
@@ -294,132 +292,134 @@ PROGRAM CONTROL
         }       return          end of subroutine; pop insptr from rstack
         V       visit   (i --)  visit subroutine pointed to by MEM[i]
 
-        The return stack is used for storing the return addresses when
-        visiting subroutines.
+The return stack is used for storing the return addresses when
+visiting subroutines.
 
-        Defsub ('{') stores the address of the next instruction to the
-        memory address given by the value on top of stack and then skips
-        instructions until '}' or end-of-code is reached.
+Defsub ('{') stores the address of the next instruction to the
+memory address given by the value on top of stack and then skips
+instructions until '}' or end-of-code is reached.
 
-   Return stack manipulation
+  *Return stack manipulation*
 
         symbol	name    stack      rstack       description
         ------	----    -----      ------       -----------
         R       retaddr (-- val)   (val --)     moves from rstack to stack
         P       pushtors (val --)  (-- val)     moves from stack to rstack
 
-        The return stack is cyclical just like the main stack.
+The return stack is cyclical just like the main stack.
 
-INPUT
+##### INPUT #####
 
         symbol  name    stack           description
         ------  ----    -----           ------------
         U       userin  (-- inword)     get data from input device
 
-        The 'userin' instruction polls data from the input device.
-        It returns a word in the format MMKK.YYXX where:
-        - YYXX indicates the last known position, in unsigned coordinates,
-          of the pointing device (mouse, touch, lightpen, etc.)
-        - KK indicates the unicode number of the last character entered on
-          keyboard, or 0 if no character is entered. If the unicode number
-          is above FF, it is wrapped to between 00 and FF. The value is
-          cleared to zero (or the next character in the buffer) whenever 'U'
-          is used.
-        - MM is a bit structure indicating the state of click/state and a
-          couple of keyboard keys. Bits from top to bottom:
-          80: click state (1 when a screen position is being clicked/touched)
-          40: ctrl key (1 = down)
-          20: alt/meta key
-          10: shift key
-          08: cursor up key
-          04: cursor down key
-          02: cursor left key
-          01: cursor right key
+The 'userin' instruction polls data from the input device.
+It returns a word in the format MMKK.YYXX where:
 
-DATA SEGMENT
+- YYXX indicates the last known position, in unsigned coordinates,
+  of the pointing device (mouse, touch, lightpen, etc.)
+
+- KK indicates the unicode number of the last character entered on
+  keyboard, or 0 if no character is entered. If the unicode number
+  is above FF, it is wrapped to between 00 and FF. The value is
+  cleared to zero (or the next character in the buffer) whenever 'U'
+  is used.
+ 
+- MM is a bit structure indicating the state of click/state and a
+  couple of keyboard keys. Bits from top to bottom:
+
+        80: click state (1 when a screen position is being clicked/touched)
+        40: ctrl key (1 = down)
+        20: alt/meta key
+        10: shift key
+        08: cursor up key
+        04: cursor down key
+        02: cursor left key
+        01: cursor right key
+
+##### DATA SEGMENT #####
 
         symbol  name            description
         ------  ----            -----------
         G       getdata         (numbits -- data)
         $       startdata       end code segment, start data segment
 
-        A "data segment" containing arbitrary binary data can be defined
-        after the program code. Startdata ($) ends the code segment and
-        starts the data segment.
+A "data segment" containing arbitrary binary data can be defined
+after the program code. Startdata ($) ends the code segment and
+starts the data segment.
 
-        When a program is started, the memory is filled with the contents of
-        the data segment without any alignment.
+When a program is started, the memory is filled with the contents of
+the data segment without any alignment.
 
-        Getdata ('G') can be used for reading the data segment sequentially.
-        It fetches the given number of next bits from the data segment. When
-        it runs out of data, it wraps back to the beginning.
+Getdata ('G') can be used for reading the data segment sequentially.
+It fetches the given number of next bits from the data segment. When
+it runs out of data, it wraps back to the beginning.
 
-        In the source code, the data is encoded as digits that represent 1-4
-        bits in the memory. The following symbols are available:
+In the source code, the data is encoded as digits that represent 1-4
+bits in the memory. The following symbols are available:
 
         symbol	name            description
         ------	----            -----------
         0-F     data            encodes a digitful (1-4 bits) of data.
-	b       binary	        sets digit length to 1 bit
+        b       binary          sets digit length to 1 bit
         q       quarternary     sets digit length to 2 bits
         o       octal           sets digit length to 3 bits
         h       hexadecimal     sets digit length to 4 bits (default)
 
-META
+##### META #####
 
         symbol  name    desc
         ------  ----    ----
         \       comment ignore characters in source code until newline
         ,       blank   nop; also whitespaces and newlines count as blank
 
-=== PRIMARY IMPLEMENTATION ===
+### PRIMARY IMPLEMENTATION ###
 
-EDITOR COMMANDS
+##### EDITOR COMMANDS ######
 
-        Tab toggles the editor display on/off. When the editor is hidden,
-        keyboard commands don't affect the editor state.
+Tab toggles the editor display on/off. When the editor is hidden,
+keyboard commands don't affect the editor state.
 
-        Cursor keys etc. work as expected. Shift+cursor selects an area.
+Cursor keys etc. work as expected. Shift+cursor selects an area.
 
-        Ctrl+up/down increments/decrements the number under cursor, with
-        carry.
+Ctrl+up/down increments/decrements the number under cursor, with carry.
 
-        Ctrl+left/right jumps to the final character of the previous or next
-        "word" (i.e. blank-separated section).
+Ctrl+left/right jumps to the final character of the previous or next
+"word" (i.e. blank-separated section).
 
-        f1 runs and pauses the code.
+f1 runs and pauses the code.
 
-        f2 resets the VM state (including timer and memory).
+f2 resets the VM state (including timer and memory).
 
-        Changes to the source code automatically recompile it but do not
-        restart it. This makes it convenient to do runtime changes to
-        numeric parameters etc. This functionality may change in the future.
+Changes to the source code automatically recompile it but do not
+restart it. This makes it convenient to do runtime changes to
+numeric parameters etc. This functionality may change in the future.
 
-        ESC exits the program.
+ESC exits the program.
 
-        Ctrl+C/X/V/A work as copy/cut/paste/selectall.
+Ctrl+C/X/V/A work as copy/cut/paste/selectall.
 
-        Ctrl+S saves the program to the file indicated by a line beginning
-        with '\#file' (or if there's no such line, inserts the line
-        '\#file untitled.ib' and uses untitled.ib as the filename.
-        The '\#file' lines are automatically skipped when saving.
+Ctrl+S saves the program to the file indicated by a line beginning
+with '\\#file' (or if there's no such line, inserts the line
+'\\#file untitled.ib' and uses untitled.ib as the filename.
+The '\\#file' lines are automatically skipped when saving.
 
-COMMAND LINE OPTIONS
+##### COMMAND LINE OPTIONS #####
 
        -h       Dump help on command line usage
        -v       Dump version info
        -c CODE  Execute code
        -n       No autorun of loaded code
 
-       The following extra options were added for creating the YouTube
-       video:
+The following extra options were added for creating the YouTube video:
 
        -e       Dump user keystrokes to stdout
        -p       Playback dumped user keystrokes from stdin
        -M       Dump raw video to stdout and raw audio to stderr.
                 30 fps, non-realtime, yuv4mpeg2 and pcm_s16.
 
-       Some commands used in this process, for reference:
+Some commands used in this process, for reference:
 
        ./ibniz -e > events
 
@@ -428,75 +428,90 @@ COMMAND LINE OPTIONS
        ffmpeg -i vid.avi -f s16le -ar 44100 -ac 1 \
        -i vid.pcm -vcodec copy vidav.avi
 
-=== EXAMPLES ===
+### EXAMPLES ###
 
-\ 2-character programs:
-*d \ TV noise (without sound)
-** \ Mul-texture zoomer
-9/ \ Flasher
-+/ \ "Jupiter storm"
-+% \ "Jupiter storm" in B&W
-/% \ Perspective mapper
-&* \ Sierpinski epilepsy
-qs \ Polyrhythmic flasher slowing down
-)~ \ Sliding-down squarewave
+2-character programs:
 
-\ "42 melody"
-d3r15&*
+    *d \ TV noise (without sound)
+    ** \ Mul-texture zoomer
+    9/ \ Flasher
+    +/ \ "Jupiter storm"
+    +% \ "Jupiter storm" in B&W
+    /% \ Perspective mapper
+    &* \ Sierpinski epilepsy
+    qs \ Polyrhythmic flasher slowing down
+    )~ \ Sliding-down squarewave
 
-\ Plasma
-sv5rvs--
+"42 melody"
 
-\ Munching squares with a Sierpinski harmony
-^x7r+Md8r&
+    d3r15&*
 
-\ Xor texture zoomer
-v8rsdv*vv*^
+Plasma
 
-\ Music from the video
-d6r|5*wdAr&+
+    sv5rvs--
 
-\ "Opening gate" (from FreeFull)
-8rw10r%w18r%
+Munching squares with a Sierpinski harmony
 
-\ "Spinny" (from FreeFull)
-sxsaxAr+waxBr+^
+    ^x7r+Md8r&
 
-\ Munching squares zoomer
-v8rsdv*vv*^wpp8r-
+Xor texture zoomer
 
-\ Texture tunnel
-ax8r+3lwd*xd*+q1x/x5r+^
+    v8rsdv*vv*^
 
-\ Rotozoomer
-v8rds4X3)Lx~2Xv*vv*+i!L1@2@&
+Music from the video
 
-\ Mandelbrot zoomer (76 chars)
-vArs1ldv*vv*0!1-1!0dFX4X1)Lv*vv*-vv2**0@+x1@+4X1)Lv*vv*+4x->?Lpp0:ppRpRE.5*;
+    d6r|5*wdAr&+
 
-\ Julia morpher (from real_het) (97 chars)
-2*2!2*3!10rdF2*s0!F9*s1!10,6!
-[2@d3@*4!d*2!3@d*3!3@2@+2@3@-0@+2!4@d+1@+3!4-<6@1-d6!*]6@4r.FF^1977+
+"Opening gate" (from FreeFull)
 
-\ The 122-char demo from the video
-6{^^ddd***1%}
-5{v8rsdv*vv*^wpp8r-}
-4{v8rdsx.6+s4X3)Lx~2Xv*vv*+i!L1@2@^}
-3{ax8r+3lwd*xd*+q1x/x6r+^}
-2)6r3&3+V55A9^Md6r|5*wdAr&+
+    8rw10r%w18r%
 
-\ Bitmap zoomer from the video
-v7rs6ldv*vv*7&@xr.8&$b
-00000000000000000000000000000000
-00000000011110111010010011101110
-00000000010000010010110100100100
-00000000001000010011010011100100
-00000000000100010010010100100100
-00000000000010010010010100100100
-00000000011110111010010011101110
-00000000000000000000000000000000
+"Spinny" (from FreeFull)
 
-=== CHANGES ===
+    sxsaxAr+waxBr+^
+
+Munching squares zoomer
+
+    v8rsdv*vv*^wpp8r-
+
+Texture tunnel
+
+    ax8r+3lwd*xd*+q1x/x5r+^
+
+Rotozoomer
+
+    v8rds4X3)Lx~2Xv*vv*+i!L1@2@&
+
+Mandelbrot zoomer (76 chars)
+
+    vArs1ldv*vv*0!1-1!0dFX4X1)Lv*vv*-vv2**0@+x1@+4X1)Lv*vv*+4x->?Lpp0:ppRpRE.5*;
+
+Julia morpher (from real_het) (97 chars)
+
+    2*2!2*3!10rdF2*s0!F9*s1!10,6!
+    [2@d3@*4!d*2!3@d*3!3@2@+2@3@-0@+2!4@d+1@+3!4-<6@1-d6!*]6@4r.FF^1977+
+
+The 122-char demo from the video
+
+    6{^^ddd***1%}
+    5{v8rsdv*vv*^wpp8r-}
+    4{v8rdsx.6+s4X3)Lx~2Xv*vv*+i!L1@2@^}
+    3{ax8r+3lwd*xd*+q1x/x6r+^}
+    2)6r3&3+V55A9^Md6r|5*wdAr&+
+
+Bitmap zoomer from the video
+
+    v7rs6ldv*vv*7&@xr.8&$b
+    00000000000000000000000000000000
+    00000000011110111010010011101110
+    00000000010000010010110100100100
+    00000000001000010011010011100100
+    00000000000100010010010100100100
+    00000000000010010010010100100100
+    00000000011110111010010011101110
+    00000000000000000000000000000000
+
+### CHANGES ###
 
 1.1000
 - Cut/copy/paste implemented, with system clipboard support on X11 and W32.
@@ -510,7 +525,7 @@ v7rs6ldv*vv*7&@xr.8&$b
 - Clipboard bugs fixed, window icon added
 - Machine status panel implemented
 
-=== FUTURE ===
+### FUTURE ###
 
 Tasks in an approximate order of priority:
 - Fix problems that prevent IBNIZ from working in some systems
