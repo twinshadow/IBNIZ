@@ -8,7 +8,7 @@ PERL?=		perl
 RM_F?=		rm -f
 SDL_LDFLAGS:=	$(shell sdl-config --libs)
 SDL_CFLAGS:=	$(shell sdl-config --cflags)
-CFLAGS+=	-Wall -Werror ${SDL_CFLAGS}
+CFLAGS+=	-Wall ${SDL_CFLAGS}
 LDFLAGS+=	-lm ${SDL_LDFLAGS}
 
 ifdef DEBUG
@@ -26,12 +26,12 @@ endif
 all: ${EXE}
 
 %.o: %.c
-	${CC} ${CFLAGS} ${OPTIMIZATION} -c -o $@ $^
+	${CC} -Werror ${CFLAGS} ${OPTIMIZATION} -c -o $@ $^
 
 vm_slow.o: OPTIMIZATION= -O3
 
 ${PROG}:
-	${CC} ${CFLAGS} ${OPTIMIZATION} ${LDFLAGS} -o $@ $^
+	${CC} -Werror ${CFLAGS} ${OPTIMIZATION} ${LDFLAGS} -o $@ $^
 
 ibniz: ui_sdl.o ${OBJ}
 ibniz2c: CFLAGS+= -DIBNIZ2C
