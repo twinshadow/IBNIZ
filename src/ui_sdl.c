@@ -786,9 +786,9 @@ void interactivemode(char *codetoload)
 	ed.readonly = 0;
 
 	ed_parallel.cursor =
-	    ed_parallel.selectstart =
-	    ed_parallel.selectend =
-	    ed_parallel.textbuffer = helpscreen;
+	ed_parallel.selectstart =
+	ed_parallel.selectend =
+	ed_parallel.textbuffer = helpscreen;
 	ed_parallel.readonly = 1;
 
 #ifdef X11
