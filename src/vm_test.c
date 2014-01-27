@@ -3,40 +3,40 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "ibniz.h"
 
+struct tv_avg {
+	struct timeval high;
+	struct timeval low;
+	struct timeval total;
+};
+
 struct test_result {
-	char *code;
-	int result; /* 0: pass, 1: fail */
-	char *msg;
-	size_t frames;
-	char *compile_duration;
-	char *run_duration;
+	struct tv_avg compile_tv;
+	uint32_t compile_iterations;
+	struct tv_avg run_tv;
+	uint32_t run_iterations;
+	uint32_t frames;
+	uint8_t result;
 };
 
 struct test {
 	char *code;
-	uint32_t res;
+	int32_t stacktop_expected;
+	int32_t stacktop_actual;
+	struct test_result results;
 };
 
-int
-timeval_diff (struct timeval *result, struct timeval *x, struct timeval *y)
-{
-	if (x->tv_usec < y->tv_usec) {
-		int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
-		y->tv_usec -= 1000000 * nsec;
-		y->tv_sec += nsec;
-	}
-	if (x->tv_usec - y->tv_usec > 1000000) {
-		int nsec = (x->tv_usec - y->tv_usec) / 1000000;
-		y->tv_usec += 1000000 * nsec;
-		y->tv_sec -= nsec;
-	}
-
-	result->tv_sec = x->tv_sec - y->tv_sec;
-	result->tv_usec = x->tv_usec - y->tv_usec;
-
-	return x->tv_sec < y->tv_sec;
+void test_init(struct test *test, uint32_t iterations) {
+	memset(&test->results.compile_tv, 0, sizeof(struct tv_avg));
+	memset(&test->results.run_tv, 0, sizeof(struct tv_avg));
+	test->results.compile_iterations = 0;
+	test->results.run_iterations = 0;
+	test->results.frames = 0;
+	test->results.result = -1;
+	test->results.compile_iterations = 0;
+	test->results.run_iterations = 0;
 }
 
 void waitfortimechange()
@@ -49,6 +49,8 @@ uint32_t gettimevalue()
 }
 
 void timer_start(struct timeval *timer) {
+	if (timer == NULL)
+		return;
 	gettimeofday(&timer[0], NULL);
 }
 
@@ -56,66 +58,117 @@ void timer_stop(struct timeval *timer) {
 	if (timer == NULL)
 		return;
 	gettimeofday(&timer[1], NULL);
-	if (timeval_diff(&timer[2], &timer[1], &timer[0]))
-		printf("Time went backwards!");
+	timersub(&timer[1], &timer[0], &timer[2]);
 }
 
-void output_pretty(int fd, struct test_result *tr) {
+void output_pretty(int fd, struct test *test) {
 }
 
-void output_yaml(int fd, struct test_result *tr) {
+void output_yaml(FILE *fd, struct test *test) {
+	uint8_t err = 0;
+	fprintf(fd, "-\n  code: \"%s\"\n", test->code);
+	fputs("  unit_test:\n", fd);
+	if (test->stacktop_actual == 0) {
+		err = 1;
+		fputs("        status: failed\n", fd);
+		fputs("        msg: stacktop is 0x0\n", fd);
+	}
+	else if (test->stacktop_actual != test->stacktop_expected) {
+		err = 1;
+		fputs("        status: failed\n", fd);
+		fprintf(fd, "        msg: stacktop=0x%X (should have been 0x%X)\n",
+			test->stacktop_actual, test->stacktop_expected);
+	}
+	else
+		fputs("        status: passed\n", fd);
+
+	fputs("  stats:\n", fd);
+	fprintf(fd,
+	    "    compile:\n"
+	    "      iterations: %" PRIu32 "\n"
+	    "      high: %" PRIu32 ".%" PRIu32 "\n"
+	    "      low: %" PRIu32 ".%" PRIu32 "\n"
+	    "      total: %" PRIu32 ".%" PRIu32 "\n",
+			test->results.compile_iterations,
+			(uint32_t)test->results.compile_tv.high.tv_sec,
+			(uint32_t)test->results.compile_tv.high.tv_usec,
+			(uint32_t)test->results.compile_tv.low.tv_sec,
+			(uint32_t)test->results.compile_tv.low.tv_usec,
+			(uint32_t)test->results.compile_tv.total.tv_sec,
+			(uint32_t)test->results.compile_tv.total.tv_usec);
+	fprintf(fd,
+	    "    run:\n"
+	    "      iterations: %" PRIu32 "\n"
+	    "      frames: %" PRIu32 "\n"
+	    "      high: %" PRIu32 ".%" PRIu32 "\n"
+	    "      low: %" PRIu32 ".%" PRIu32 "\n"
+	    "      total: %" PRIu32 ".%" PRIu32 "\n",
+			test->results.run_iterations,
+			test->results.frames,
+			(uint32_t)test->results.run_tv.high.tv_sec,
+			(uint32_t)test->results.run_tv.high.tv_usec,
+			(uint32_t)test->results.run_tv.low.tv_sec,
+			(uint32_t)test->results.run_tv.low.tv_usec,
+			(uint32_t)test->results.run_tv.total.tv_sec,
+			(uint32_t)test->results.run_tv.total.tv_usec);
+
+	fputs("\n", fd);
+}
+
+void timer_result(struct timeval *tv, struct tv_avg *y) {
+	if (timercmp(tv, &y->high, >))
+		y->high = *tv;
+	else if (timercmp(tv, &y->low, <))
+		y->low = *tv;
+	timeradd(&y->total, tv, &y->total);
 }
 
 /* TODO: Use the test_result struct for the result */
-int runtest(char *code, uint32_t correct_stacktop)
-{
-	size_t frame_count = 0;
-	struct timeval *compile_time;
+int runtest(struct test *test) {
+	size_t frame_count;
 	struct timeval *run_time;
 	//struct test_result res;
 	int err = 0;
-
-	compile_time = calloc(3, sizeof(struct timeval));
+	uint32_t iter, repeat = 100;
+	test_init(test, repeat);
 	run_time = calloc(3, sizeof(struct timeval));
 
-	timer_start(compile_time);
 	vm_init();
-	vm_compile(code);
-	timer_stop(compile_time);
-
-	timer_start(run_time);
-	while (!vm.stopped)
-		frame_count += vm_run();
-	timer_stop(run_time);
-
-	printf("-\n  code: \"%s\"\n", code);
-	puts("  unit_test:");
-	if (vm.stack[vm.sp] == 0) {
-		err = 1;
-		puts("        status: failed");
-		puts("        msg: stacktop is 0x0");
+	for (iter=0; iter < repeat; iter++) {
+		timer_start(run_time);
+		vm_compile(test->code);
+		timer_stop(run_time);
+		timer_result(&run_time[2], &test->results.compile_tv);
 	}
-	else if (vm.stack[vm.sp] != correct_stacktop) {
-		err = 1;
-		puts("        status: failed");
-		printf("        msg: stacktop=0x%X (should have been 0x%X)\n",
-			vm.stack[vm.sp], correct_stacktop);
+	test->results.compile_iterations = iter;
+
+	for (iter=0; iter < repeat; iter++) {
+		frame_count = 0;
+		timer_start(run_time);
+		while (vm.stopped == 0)
+			frame_count += vm_run();
+		timer_stop(run_time);
+		/* only testing the first run */
+		if (iter == 0) {
+			test->results.frames = frame_count;
+			test->stacktop_actual = vm.stack[vm.sp];
+			if (test->stacktop_actual == 0 ||
+			    test->stacktop_expected != test->stacktop_actual) {
+				test->results.result = 1;
+				break;
+			}
+		}
+		vm.stopped = 0;
+		timer_result(&run_time[2], &test->results.run_tv);
 	}
-	else
-		puts("        status: passed");
+	test->results.run_iterations = iter;
 
-	puts("  stats:");
-	printf("    frames: %zu\n    compile: %lu.%uu\n    run: %lu.%uu\n",
-		frame_count,
-		compile_time[2].tv_sec, compile_time[2].tv_usec,
-		run_time[2].tv_sec, run_time[2].tv_usec);
-
-	puts("");
+	output_yaml(stdout, test);
+	free(run_time);
 	return err;
 }
 
-int main()
-{
+int main() {
 	/* TODO: i guess we need a little bit more coverage here */
 	struct test tests[] = {
 		/* Integer tests */
@@ -137,14 +190,14 @@ int main()
 		{"2*2!2*3!10rdF2*s0!F9*s1!10,6![2@d3@*4!d*2!3@d*3!3@2@+2@3@-0@+2!4@d+1@+3!4-<6@1-d6!*]6@4r.FF^1977+T", 0x19770f00},
 		/* Mandelbrot-zoomer test */
 		{"vArs1ldv*vv*0!1-1!0dFX4X1)Lv*vv*-vv2**0@+x1@+4X1)Lv*vv*+4x->?Lpp0:ppRpRE.5*;T", 0x1},
-		{NULL, 0},
+		{NULL},
 	};
 	size_t numtests = sizeof(tests) / sizeof(struct test);
 	size_t err = 0;
 	int i;
 
 	for (i = 0; i < numtests && tests[i].code != NULL; i++) {
-		err += runtest(tests[i].code, tests[i].res);
+		err += runtest(&tests[i]);
 	}
 	return (err != 0);
 }
