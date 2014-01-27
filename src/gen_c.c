@@ -19,7 +19,7 @@ void gen_nativeinit()
 	       "#define IBNIZ_ROR(a,b) ROR((a),(((b)>>16)&31))\n"
 	       "#define IBNIZ_MUL(a,b) ((((int64_t)((int32_t)(a)))*((int32_t)(b)))>>16)\n"
 	       "#define IBNIZ_DIV(a,b) ((b)==0?0:((((int64_t)((int32_t)(a)))<<16)/((int32_t)b)))\n"
-	       "#define IBNIZ_MOD(a,b) ((b)==0?0:((a)%(b)))\n"
+	       "#define IBNIZ_MOD(a,b) ((b)==0?0:((a)%%(b)))\n"
                "#define IBNIZ_SQRT(a)    ((a<0)?0:(sqrt((a)/65536.0)*65536.0))\n"
 	       "#define IBNIZ_SIN(a)     (sin((a)*(2*M_PI/65536.0))*65536.0)\n"
 	       "#define IBNIZ_ATAN2(a,b) (atan2((a),(b))*(65536.0/(2*M_PI)))\n"

@@ -30,12 +30,13 @@ all: ${EXE}
 
 vm_slow.o: OPTIMIZATION= -O3
 
-${PROG}: ${OBJ}
+${PROG}:
 	${CC} ${CFLAGS} ${OPTIMIZATION} ${LDFLAGS} -o $@ $^
 
-ibniz: ui_sdl.o
+ibniz: ui_sdl.o ${OBJ}
 ibniz2c: CFLAGS+= -DIBNIZ2C
-vmtest: vm_test.o
+ibniz2c: ibniz2c.o compiler.o
+vmtest: vm_test.o compiler.o vm_slow.o
 
 font.i: font.pl
 	${PERL} font.pl > font.i
