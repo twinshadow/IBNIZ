@@ -452,7 +452,10 @@ char *getlinestart(char *b)
 
 char *getnextlinestart(char *b)
 {
-	while (*b && b[-1] != '\n')
+	/* find the next NULL or newline */
+	while (*b && *b != '\n')
+		b++;
+	if (*b != 0)
 		b++;
 	return b;
 }
