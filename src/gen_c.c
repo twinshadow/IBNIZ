@@ -249,7 +249,7 @@ void gen_shl_reg_reg_imm(int t, int s1, int32_t i)
 
 void gen_neg_reg_reg(int t, int s)
 {
-	printf("%c=~%c\n", t + 'A', s + 'A');
+	printf("%c=~%c;\n", t + 'A', s + 'A');
 }
 
 void gen_atan2_reg_reg_reg(int t, int s1, int s)
