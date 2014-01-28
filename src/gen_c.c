@@ -39,7 +39,8 @@ void gen_nativeinit()
 	       "SDL_Surface*s;\n"
 	       "SDL_Overlay*o;\n"
 	       "\n"
-	       "main()\n"
+	       "int\n"
+	       "main(void)\n"
 	       "{\n"
 	       "  SDL_Init(SDL_INIT_VIDEO);\n"
 	       "  s=SDL_SetVideoMode(512,512,0,0);\n"
@@ -83,6 +84,7 @@ void *gen_nativefinish()
 	       "  SDL_Delay(10);\n"
 	       "  }\n"
 	       "  SDL_Quit();\n"
+	       "  return 0;\n"
 	       "}\n");
 
 	return NULL;
