@@ -65,22 +65,22 @@ void output_pretty(int fd, struct test *test) {
 }
 
 void output_yaml(FILE *fd, struct test *test) {
-	uint8_t err = 0;
 	fprintf(fd, "-\n  code: \"%s\"\n", test->code);
-	fputs("  unit_test:\n", fd);
-	if (test->stacktop_actual == 0) {
-		err = 1;
-		fputs("        status: failed\n", fd);
-		fputs("        msg: stacktop is 0x0\n", fd);
+
+	if (test->stacktop_expected != 0) {
+		fputs("  unit_test:\n", fd);
+		if (test->stacktop_actual == 0) {
+			fputs("        status: failed\n", fd);
+			fputs("        msg: stacktop is 0x0\n", fd);
+		}
+		else if (test->stacktop_actual != test->stacktop_expected) {
+			fputs("        status: failed\n", fd);
+			fprintf(fd, "        msg: stacktop=0x%X (should have been 0x%X)\n",
+				test->stacktop_actual, test->stacktop_expected);
+		}
+		else
+			fputs("        status: passed\n", fd);
 	}
-	else if (test->stacktop_actual != test->stacktop_expected) {
-		err = 1;
-		fputs("        status: failed\n", fd);
-		fprintf(fd, "        msg: stacktop=0x%X (should have been 0x%X)\n",
-			test->stacktop_actual, test->stacktop_expected);
-	}
-	else
-		fputs("        status: passed\n", fd);
 
 	fputs("  stats:\n", fd);
 	fprintf(fd,
@@ -152,8 +152,9 @@ int runtest(struct test *test) {
 		if (iter == 0) {
 			test->results.frames = frame_count;
 			test->stacktop_actual = vm.stack[vm.sp];
-			if (test->stacktop_actual == 0 ||
-			    test->stacktop_expected != test->stacktop_actual) {
+			if (test->stacktop_expected != 0 &&
+			   (test->stacktop_actual == 0 ||
+			    test->stacktop_expected != test->stacktop_actual)) {
 				test->results.result = 1;
 				break;
 			}
@@ -187,9 +188,9 @@ int main() {
 		{"0?5:1;T", 1 << 16},
 
 		/* Julia test */
-		{"2*2!2*3!10rdF2*s0!F9*s1!10,6![2@d3@*4!d*2!3@d*3!3@2@+2@3@-0@+2!4@d+1@+3!4-<6@1-d6!*]6@4r.FF^1977+T", 0x19770f00},
+		{"2*2!2*3!10rdF2*s0!F9*s1!10,6![2@d3@*4!d*2!3@d*3!3@2@+2@3@-0@+2!4@d+1@+3!4-<6@1-d6!*]6@4r.FF^1977+T"},
 		/* Mandelbrot-zoomer test */
-		{"vArs1ldv*vv*0!1-1!0dFX4X1)Lv*vv*-vv2**0@+x1@+4X1)Lv*vv*+4x->?Lpp0:ppRpRE.5*;T", 0x1},
+		{"vArs1ldv*vv*0!1-1!0dFX4X1)Lv*vv*-vv2**0@+x1@+4X1)Lv*vv*+4x->?Lpp0:ppRpRE.5*;T"},
 		{NULL},
 	};
 	size_t numtests = sizeof(tests) / sizeof(struct test);
