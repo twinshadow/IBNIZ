@@ -78,16 +78,13 @@ output_yaml(FILE * fd, struct test *test) {
 		if (test->stacktop_actual == 0) {
 			fputs("        status: failed\n", fd);
 			fputs("        msg: stacktop is 0x0\n", fd);
-		}
-		else if (test->stacktop_actual != test->stacktop_expected) {
+		} else if (test->stacktop_actual != test->stacktop_expected) {
 			fputs("        status: failed\n", fd);
 			fprintf(fd, "        msg: stacktop=0x%X (should have been 0x%X)\n",
-				test->stacktop_actual, test->stacktop_expected);
-		}
-		else
+			      test->stacktop_actual, test->stacktop_expected);
+		} else
 			fputs("        status: passed\n", fd);
 	}
-
 	fputs("  stats:\n", fd);
 	fprintf(fd,
 		"    compile:\n"
@@ -161,8 +158,8 @@ runtest(struct test *test) {
 			test->results.frames = frame_count;
 			test->stacktop_actual = vm.stack[vm.sp];
 			if (test->stacktop_expected != 0 &&
-			   (test->stacktop_actual == 0 ||
-			    test->stacktop_expected != test->stacktop_actual)) {
+			    (test->stacktop_actual == 0 ||
+			  test->stacktop_expected != test->stacktop_actual)) {
 				test->results.result = 1;
 				break;
 			}

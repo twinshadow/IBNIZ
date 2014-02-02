@@ -20,8 +20,8 @@ compiler_parse(char *src) {
 	uint32_t *hd = vm.parsed_hints;
 	uint32_t num;
 	char *s, nummode = 0, shift = 0, src_step, digit, code_frame;
-	int i, data_step, pad, digitsz, data_wrap, seek0, seek1, skip_frame,
-	 pad_inc, skip;
+	int i, data_step, pad, digitsz, data_wrap, seek0, seek1, skip_frame, pad_inc,
+	 skip;
 
 	s = src;
 

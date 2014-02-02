@@ -134,10 +134,11 @@ stepmediacontext(int skippoint, int op) {
 
 void
 flipvideopage() {
+	uint32_t newt;
+
 	vm.visiblepage = ((vm.sp >> 16) & 1) ^ 1;
 	for (;;) {
-		uint32_t newt = gettimevalue();
-
+		newt = gettimevalue();
 		if (newt != vm.videotime)
 			break;
 		waitfortimechange();
@@ -192,9 +193,9 @@ pmv_setfunc() {
 
 void
 pushmediavariables() {
-	if (vm.mediacontext == 0) {
-		int p = vm.sp & 65535;
+	int p = vm.sp & 65535;
 
+	if (vm.mediacontext == 0) {
 		if (vm.videomode == 0) {
 			if (vm.visiblepage == (vm.sp >> 16)) {
 				flipvideopage();
@@ -224,7 +225,10 @@ pushmediavariables() {
 
 int
 vm_run() {
-	int cycles;
+	int cycles, point;
+	char op;
+	int32_t *a, *b, *c, tmp;
+	uint32_t *i;
 
 	if (vm.stopped)
 		return 0;
@@ -235,19 +239,17 @@ vm_run() {
 	pmv_setfunc();
 
 	for (cycles = CYCLESPERRUN; cycles; cycles--) {
-		char op = *vm.ip++;
-		int32_t *a = &vm.stack[vm.sp], *b;
+		op = *vm.ip++;
+		a = &vm.stack[vm.sp];
 
 		switch (op) {
-			/*** NUMBERS ***/
-
+/*** NUMBERS ***/
 		case (OP_LOADIMM):
 			MOVESP(1);
 			vm.stack[vm.sp] = vm.parsed_hints[vm.ip - 1 - vm.parsed_code];
 			break;
 
-			/*** ARITHMETIC ***/
-
+/*** ARITHMETIC ***/
 		case ('+'):	/* (b a -- a+b) */
 			MOVESP(-1);
 			vm.stack[vm.sp] += *a;
@@ -341,8 +343,7 @@ vm_run() {
 			/* if(*a)*a=0x10000;else *a=0; */
 			break;
 
-			/*** STACK MANIPULATION ***/
-
+/*** STACK MANIPULATION ***/
 		case ('d'):	/* (a -- a a) */
 			MOVESP(1);
 			vm.stack[vm.sp] = *a;
@@ -354,8 +355,7 @@ vm_run() {
 
 		case ('x'):	/* (b a -- a b) // forth: SWAP */
 			{
-				int32_t tmp = *a;
-
+				tmp = *a;
 				b = &vm.stack[(vm.sp - 1) & vm.stackmask];
 				*a = *b;
 				*b = tmp;
@@ -364,13 +364,12 @@ vm_run() {
 
 		case ('v'):	/* (c b a -- b a c) // forth: ROT */
 			{
-				int32_t a_v = *a, *c;
-
+				tmp = *a;
 				b = &vm.stack[(vm.sp - 1) & vm.stackmask];
 				c = &vm.stack[(vm.sp - 2) & vm.stackmask];
 				*a = *c;
 				*c = *b;
-				*b = a_v;
+				*b = tmp;
 			}
 			break;
 
@@ -385,13 +384,12 @@ vm_run() {
 			vm.stack[(vm.sp - ROL(*a, 16)) & vm.stackmask] = *b;
 			break;
 
-		case ('z'):
+		case ('z'):	/* XXX: document this VM operation */
 			MOVESP(1);
 			vm.stack[vm.sp] = ROL(((vm.stack + vm.sp) - vm.mem), 16);
 			break;
 
-			/*** EXTERIOR LOOP ***/
-
+/*** EXTERIOR LOOP ***/
 		case ('M'):	/* media switch */
 		case ('\0'):
 			if (vm.specialcontextstep & (1 << vm.mediacontext))
@@ -423,8 +421,7 @@ vm_run() {
 			vm.stopped = 1;
 			return CYCLESPERRUN - cycles;
 
-			/*** MEMORY MANIPULATION ***/
-
+/*** MEMORY MANIPULATION ***/
 		case ('@'):	/* (addr -- val) */
 			*a = vm.mem[ROL(*a, 16) & (MEMSIZE - 1)];
 			break;
@@ -436,8 +433,7 @@ vm_run() {
 			vm.mem[ROL(*a, 16) & (MEMSIZE - 1)] = *b;
 			break;
 
-			/*** PROGRAM CONTROL: Conditional execution ***/
-
+/*** PROGRAM CONTROL: Conditional execution ***/
 		case ('?'):	/* if */
 			MOVESP(-1);
 			if (*a != 0)
@@ -447,8 +443,7 @@ vm_run() {
 		case (';'):	/* endif/nop */
 			break;
 
-			/*** PROGRAM CONTROL: Loops ***/
-
+/*** PROGRAM CONTROL: Loops ***/
 		case ('i'):	/* i counter */
 			MOVESP(1);
 			vm.stack[vm.sp] = ROL(vm.rstack[(vm.rsp - 1) & vm.rstackmask], 16);
@@ -469,15 +464,12 @@ vm_run() {
 			break;
 
 		case ('L'):	/* loop */
-			{
-				uint32_t *i = &vm.rstack[(vm.rsp - 1) & vm.rstackmask];
-
-				(*i)--;
-				if (*i == 0)
-					MOVERSP(-2);
-				else
-					vm.ip = (vm.rstack[vm.rsp] % vm.codelgt) + vm.parsed_code;
-			}
+			i = &vm.rstack[(vm.rsp - 1) & vm.rstackmask];
+			(*i)--;
+			if (*i == 0)
+				MOVERSP(-2);
+			else
+				vm.ip = (vm.rstack[vm.rsp] % vm.codelgt) + vm.parsed_code;
 			break;
 
 		case (']'):	/* while */
@@ -490,16 +482,14 @@ vm_run() {
 
 		case ('J'):	/* jump */
 			{
-				int point = *a % vm.codelgt;	/* !!! addressing will
+				point = *a % vm.codelgt;	/* !!! addressing will
 								   change */
-
 				MOVESP(-1);
 				vm.ip = vm.parsed_code + point;
 			}
 			break;
 
-			/*** PROGRAM CONTROL: Subroutines ***/
-
+/*** PROGRAM CONTROL: Subroutines ***/
 		case ('{'):	/* defsub */
 			MOVESP(-1);
 			vm.mem[ROL(*a, 16) & (MEMSIZE - 1)] = vm.ip - vm.parsed_code;
@@ -516,8 +506,7 @@ vm_run() {
 			vm.ip = ((vm.mem[ROL(*a, 16) & (MEMSIZE - 1)]) % vm.codelgt) + vm.parsed_code;
 			break;
 
-			/*** PROGRAM CONTROL: Rstack manipulation ***/
-
+/*** PROGRAM CONTROL: Rstack manipulation ***/
 		case ('R'):	/* pull from rstack to mainstack */
 			MOVESP(1);
 			vm.stack[vm.sp] = ROL(vm.rstack[vm.rsp], 16);
@@ -529,16 +518,14 @@ vm_run() {
 			MOVESP(-1);
 			break;
 
-			/*** INPUT ***/
-
+/*** INPUT ***/
 		case ('U'):	/* userinput */
 			MOVESP(1);
 			vm.stack[vm.sp] = vm.userinput;
 			vm.userinput &= 0xff00ffff;
 			break;
 
-			/*** DATA SEGMENT ***/
-
+/*** DATA SEGMENT ***/
 		case ('G'):	/* getbits */
 			*a = ROL(getdatabits((*a >> 16) & 31), 16);
 			break;

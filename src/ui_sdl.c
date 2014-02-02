@@ -63,10 +63,12 @@ uint8_t font[] =
 void
 drawChar8x8(uint8_t * d, uint8_t * s, uint32_t fg, uint32_t bg) {
 	int y, x;
+	int bitmap;
+	uint8_t *dd;
 
 	for (y = 0; y < 8; y++) {
-		int bitmap = s[y];
-		uint8_t *dd = d + WIDTH * y * 2;
+		bitmap = s[y];
+		dd = d + WIDTH * y * 2;
 
 		for (x = 0; x < 16; x += 2) {
 			dd[x] = (bitmap & 128) ? fg : bg;
@@ -77,7 +79,7 @@ drawChar8x8(uint8_t * d, uint8_t * s, uint32_t fg, uint32_t bg) {
 
 void
 drawTextBuffer() {
-	int x = 0, y = ed.firsty;
+	int a, bg, fg, x = 0, y = ed.firsty;
 	int scroll = 0;
 	char *b = ed.textbuffer;
 	char *lightstart = ed.cursor, *lightend = ed.cursor;
@@ -87,9 +89,9 @@ drawTextBuffer() {
 		lightend = ed.selectend;
 	}
 	for (;;) {
-		int a = *b & 127;
-		int fg = 0xffffff;
-		int bg = 0x000000;
+		a = *b & 127;
+		fg = 0xffffff;
+		bg = 0x000000;
 
 		if (b >= lightstart && b <= lightend) {
 			fg = 0x000000;
@@ -198,11 +200,12 @@ showyuv() {
 void
 updatescreen() {
 	int x, y;
-	uint32_t *s = (uint32_t *) (vm.mem + 0xE0000 + (vm.visiblepage << 16));
+	uint32_t a, b, *s = (uint32_t *) (vm.mem + 0xE0000 + (vm.visiblepage << 16));
 
 	for (y = 0; y < 256; y++)
 		for (x = 0; x < 128; x++) {
-			uint32_t b = s[0], a = s[1];
+			a = s[1];
+			b = s[0];
 
 			/* little_endian, TODO:support big - endian */
 			a = (a & 0xff000000) |
@@ -263,13 +266,13 @@ gettimevalue() {
 
 void
 waitfortimechange() {
-	int wait = 200;
+	int f0, nexttickval, wait = 200;
 
 	if (ui.benchmark_mode)
 		return;
 	if (ui.runstat == 1) {
-		int f0 = gettimevalue();
-		int nexttickval = ((f0 + 1) * 50) / 3 + ui.timercorr;
+		f0 = gettimevalue();
+		nexttickval = ((f0 + 1) * 50) / 3 + ui.timercorr;
 
 		wait = nexttickval - getcorrectedticks() + 1;
 		if (wait < 1)
@@ -281,19 +284,22 @@ waitfortimechange() {
 }
 
 /*** input-related ***/
-
 void
 getkeystates() {
 	int m = SDL_GetModState();
 	uint8_t *k = SDL_GetKeyState(NULL);
 
-	m = ((m & KMOD_CTRL) ? 64 : 0) | ((m & (KMOD_ALT | KMOD_META)) ? 32 : 0) | ((m & KMOD_SHIFT) ? 16 : 0)
-	    | (k[SDLK_UP] ? 8 : 0) | (k[SDLK_DOWN] ? 4 : 0) | (k[SDLK_LEFT] ? 2 : 0) | (k[SDLK_RIGHT] ? 1 : 0);
+	m = ((m & KMOD_CTRL) ? 64 : 0) | \
+	    ((m & (KMOD_ALT | KMOD_META)) ? 32 : 0) | \
+	    ((m & KMOD_SHIFT) ? 16 : 0) | \
+	    (k[SDLK_UP] ? 8 : 0) | \
+	    (k[SDLK_DOWN] ? 4 : 0) | \
+	    (k[SDLK_LEFT] ? 2 : 0) | \
+	    (k[SDLK_RIGHT] ? 1 : 0);
 	vm.userinput = (vm.userinput & 0x80FFFFFF) | (m << 24);
 }
 
 /*** audio-related ***/
-
 void
 pauseaudio(s) {
 	if (!ui.opt_nonrealtime)
@@ -373,11 +379,10 @@ checkmediaformats() {
 }
 
 /*** dumper (event recording/playback & video/audio file dumping) ***/
-
 void
 pollplaybackevent(SDL_Event * e) {
 	static int next = 0, nextkey = 0, nextasc = 0, nextmod = 0;
-	int now = getticks();
+	int base, now = getticks();
 
 	e->type = SDL_NOEVENT;
 	if (now < next)
@@ -389,7 +394,7 @@ pollplaybackevent(SDL_Event * e) {
 		e->key.keysym.unicode = nextasc;
 	}
 	if (!feof(stdin)) {
-		int base = next;
+		base = next;
 
 		scanf("%d %d %d %d", &next, &nextkey, &nextasc, &nextmod);
 		next += base;
@@ -402,6 +407,7 @@ dumpmediaframe() {
 	static char isfirst = 1;
 	int x, y;
 	int16_t ab[735];
+	char *oo;
 
 	if (isfirst) {
 		printf("YUV4MPEG2 W%d H%d F%d:%d Ip A0:0 C420mpeg2 XYSCSS=420MPEG2\n",
@@ -415,8 +421,7 @@ dumpmediaframe() {
 		for (x = 0; x < 32 * 2; x++)
 			putchar(0);
 		for (x = 0; x < 256; x++) {
-			char *oo = (char *)(sdl.o->pixels[0]) + (y >> 1) * 256 * 2 + x * 2;
-
+			oo = (char *)(sdl.o->pixels[0]) + (y >> 1) * 256 * 2 + x * 2;
 			putchar(oo[0]);
 			putchar(oo[0]);
 		}
@@ -428,8 +433,7 @@ dumpmediaframe() {
 		for (x = 0; x < 32; x++)
 			putchar(0x80);
 		for (x = 0; x < 256; x++) {
-			char *oo = (char *)(sdl.o->pixels[0]) + y * 256 * 2 + (x >> 1) * 4;
-
+			oo = (char *)(sdl.o->pixels[0]) + y * 256 * 2 + (x >> 1) * 4;
 			putchar(oo[1]);
 		}
 		for (x = 0; x < 32; x++)
@@ -440,8 +444,7 @@ dumpmediaframe() {
 		for (x = 0; x < 32; x++)
 			putchar(0x80);
 		for (x = 0; x < 256; x++) {
-			char *oo = (char *)(sdl.o->pixels[0]) + y * 256 * 2 + (x >> 1) * 4;
-
+			oo = (char *)(sdl.o->pixels[0]) + y * 256 * 2 + (x >> 1) * 4;
 			putchar(oo[3]);
 		}
 		for (x = 0; x < 32; x++)
@@ -485,17 +488,16 @@ getnextlinestart(char *b) {
 
 char *
 getsrcvar(char *vn) {
-	char *s = ed.textbuffer;
-	int vnlen = strlen(vn);
+	char *d, *s1, *s = ed.textbuffer;
+	int len, vnlen = strlen(vn);
 
 	for (;;) {
-		char *s1 = s;
-
+		s1 = s;
 		while (*s1 != '\n' && *s1 != '\0')
 			s1++;
 		if (!strncmp(s, vn, vnlen)) {
-			int len = (s1 - s) - vnlen + 1;
-			char *d = malloc(len);
+			len = (s1 - s) - vnlen + 1;
+			d = malloc(len);
 
 			memcpy(d, s + vnlen, len);
 			d[len - 1] = '\0';
@@ -627,13 +629,13 @@ ed_right(char with_select) {
 
 void
 ed_up(char with_select) {
-	char *p = getlinestart(ed.cursor);
+	char *pp, *p = getlinestart(ed.cursor);
 	int x = ed.cursor - p;
 
 	if (x >= 32)
 		ed_movecursor(ed.cursor - 32, with_select);
 	else if (p > ed.textbuffer) {
-		char *pp = getlinestart(p - 1);
+		pp = getlinestart(p - 1);
 
 		if (p - pp - 1 < x)
 			ed_movecursor(p - 1, with_select);
@@ -647,14 +649,14 @@ void
 ed_down(char with_select) {
 	char *l0 = getlinestart(ed.cursor);
 	char *p = getnextlinestart(ed.cursor);
+	int x;
 
 	if (p == ed.cursor && *p)
 		p = getnextlinestart(p + 1);
 	if (ed.cursor < p - 32)
 		ed_movecursor(ed.cursor + 32, with_select);
 	else {
-		int x = ed.cursor - l0;
-
+		x = ed.cursor - l0;
 		ed_movecursor(p, with_select);
 		while (*ed.cursor && *ed.cursor != '\n' && x) {
 			ed_movecursor(ed.cursor + 1, with_select);
@@ -667,7 +669,7 @@ ed_down(char with_select) {
 
 void
 ed_deleteselection() {
-	char *s;
+	char a, *s;
 	int gap = ed.selectend - ed.selectstart + 1;
 
 	if (gap <= 0)
@@ -682,8 +684,7 @@ ed_deleteselection() {
 
 	s = ed.selectstart;
 	for (;;) {
-		char a = s[gap];
-
+		a = s[gap];
 		*s++ = a;
 		if (!a)
 			break;
@@ -694,12 +695,13 @@ ed_deleteselection() {
 
 void
 ed_backspace(int offset) {
+	char *s;
+
 	if (ed.selectend > ed.selectstart)
 		ed_deleteselection();
 	else {
 		if (ed.cursor != ed.textbuffer) {
-			char *s = (ed.cursor += offset);
-
+			s = (ed.cursor += offset);
 			for (; *s; s++)
 				*s = s[1];
 		}
@@ -709,7 +711,7 @@ ed_backspace(int offset) {
 void
 ed_save() {
 	FILE *f;
-	char *fn = getsrcvar("\\#file ");
+	char *s, *s1, *fn = getsrcvar("\\#file ");
 
 	if (!fn) {
 		inserttosrc("\\#file untitled.ib\n");
@@ -720,10 +722,10 @@ ed_save() {
 	if (!f)
 		inserttosrc("\\ ERROR: couldn't save file!\n");
 	else {
-		char *s = ed.textbuffer;
+		s = ed.textbuffer;
 
 		while (*s) {
-			char *s1 = s;
+			s1 = s;
 
 			while (*s1 && *s1 != '\n')
 				s1++;
@@ -740,6 +742,8 @@ ed_save() {
 
 void
 ed_char(int ascii) {
+	char *s;
+
 	if (ed.readonly)
 		return;
 
@@ -750,15 +754,11 @@ ed_char(int ascii) {
 			ed_deleteselection();
 		}
 		/* if in insertmode... */
-		{
-			char *s;
-
-			for (s = ed.cursor; *s; s++);
-			if (s >= ed.textbuffer + EDITBUFSZ)
-				return;
-			for (; s >= ed.cursor; s--)
-				s[1] = *s;
-		}
+		for (s = ed.cursor; *s; s++);
+		if (s >= ed.textbuffer + EDITBUFSZ)
+			return;
+		for (; s >= ed.cursor; s--)
+			s[1] = *s;
 		*ed.cursor++ = ascii;
 	}
 }
@@ -816,8 +816,16 @@ ed_getprogbuf() {
 /*** main loop etc ***/
 void
 interactivemode(char *codetoload) {
+	static int lastpage = 0;
+	static int last = 0;
 	int codechanged = 0;
+	int c;
+	int sym, mod;
+	int now;
+	int x, y;
 	uint32_t prevtimevalue = gettimevalue() - 1;
+	uint32_t t;
+	float secs;
 	SDL_Event e;
 
 	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, 10);
@@ -840,7 +848,7 @@ interactivemode(char *codetoload) {
 #endif
 
 	for (;;) {
-		uint32_t t = gettimevalue();
+		t = gettimevalue();
 
 		if (prevtimevalue != t || e.type != SDL_NOEVENT) {
 			updatescreen();
@@ -849,18 +857,15 @@ interactivemode(char *codetoload) {
 			DEBUG("t:%x audio:%x playback:%x video:%x\n",
 			      t, (vm.audiotime) + (((vm.mediacontext == 1) ? vm.sp : vm.cosp) >> 10)
 			      ,(ui.auplaytime >> 16) + (ui.auplayptr >> 26), vm.videotime);
-		} {
-			static int lastpage = 0;
-
-			if (lastpage != vm.visiblepage) {
-				lastpage = vm.visiblepage;
-				ui.framecounter++;
-				if (ui.opt_nonrealtime)
-					nrtframestep();
-			}
+		}
+		if (lastpage != vm.visiblepage) {
+			lastpage = vm.visiblepage;
+			ui.framecounter++;
+			if (ui.opt_nonrealtime)
+				nrtframestep();
 		}
 		if (t >= 120 + ui.bmtime) {
-			float secs = (t - ui.bmtime) / 60.0;
+			secs = (t - ui.bmtime) / 60.0;
 
 			ui.mops = ui.cyclecounter / (secs * 1000000);
 			ui.fps = ui.framecounter / secs;
@@ -891,11 +896,9 @@ interactivemode(char *codetoload) {
 						pauseaudio(0);
 					}
 					codechanged = 0;
-				} {
-					int c = vm_run();
-
-					ui.cyclecounter += c;
 				}
+				c = vm_run();
+				ui.cyclecounter += c;
 				if (ui.opt_nonrealtime) {
 					dumper.subframe++;
 					if (!(dumper.subframe & 4095))
@@ -909,13 +912,10 @@ interactivemode(char *codetoload) {
 		if (e.type == SDL_QUIT)
 			break;
 		if (e.type == SDL_KEYDOWN) {
-			int sym = e.key.keysym.sym;
-			int mod = e.key.keysym.mod;
-
+			sym = e.key.keysym.sym;
+			mod = e.key.keysym.mod;
 			if (ui.opt_dumpkeys) {
-				static int last = 0;
-				int now = getticks();
-
+				now = getticks();
 				if (!sym && e.key.keysym.unicode)
 					sym = e.key.keysym.unicode;
 				printf("%d %d %d %d\n", now - last, sym,
@@ -1005,9 +1005,8 @@ interactivemode(char *codetoload) {
 		} else if (e.type == SDL_KEYUP) {
 			getkeystates();
 		} else if (e.type == SDL_MOUSEMOTION) {
-			int y = (e.motion.y * 256) / sdl.winsz;
-			int x = (e.motion.x * 256) / sdl.winsz;
-
+			y = (e.motion.y * 256) / sdl.winsz;
+			x = (e.motion.x * 256) / sdl.winsz;
 			if (y >= 0 && x >= 0 && y <= 255 && x <= 255)
 				vm.userinput = (vm.userinput & 0xFFFF0000) | (y << 8) | x;
 		} else if (e.type == SDL_MOUSEBUTTONDOWN) {
@@ -1039,6 +1038,11 @@ int
 main(int argc, char **argv) {
 	signed char autorun = -1;
 	char *codetoload = welcometext;
+	char *s;
+	FILE *f;
+	char buf[EDITBUFSZ + 1];
+	int hdrlgt, buflgt;
+
 
 	ui.opt_dumpkeys = 0;
 	ui.opt_nonrealtime = 0;
@@ -1048,8 +1052,7 @@ main(int argc, char **argv) {
 	ui.osd_visible = 1;
 	argv++;
 	while (*argv) {
-		char *s = *argv;
-
+		s = *argv;
 		if (*s == '-') {
 			while (s[0] == '-')
 				s++;
@@ -1081,10 +1084,7 @@ main(int argc, char **argv) {
 				break;
 			}
 		} else {
-			FILE *f = fopen(s, "r");
-			char buf[EDITBUFSZ + 1];
-			int hdrlgt, buflgt;
-
+			f = fopen(s, "r");
 			/* if (codetoload) free(codetoload); */
 			if (!f) {
 				fprintf(stderr, "Can't load file '%s'\n", s);
