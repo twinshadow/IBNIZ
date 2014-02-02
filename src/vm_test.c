@@ -28,7 +28,8 @@ struct test {
 	struct test_result results;
 };
 
-void test_init(struct test *test, uint32_t iterations) {
+void
+test_init(struct test *test, uint32_t iterations) {
 	memset(&test->results.compile_tv, 0, sizeof(struct tv_avg));
 	memset(&test->results.run_tv, 0, sizeof(struct tv_avg));
 	test->results.compile_iterations = 0;
@@ -39,32 +40,38 @@ void test_init(struct test *test, uint32_t iterations) {
 	test->results.run_iterations = 0;
 }
 
-void waitfortimechange()
-{
+void
+waitfortimechange() {
 }
 
-uint32_t gettimevalue()
-{
+uint32_t
+gettimevalue() {
 	return 0;
 }
 
-void timer_start(struct timeval *timer) {
+void
+timer_start(struct timeval *timer) {
 	if (timer == NULL)
 		return;
 	gettimeofday(&timer[0], NULL);
 }
 
-void timer_stop(struct timeval *timer) {
+void
+timer_stop(struct timeval *timer) {
 	if (timer == NULL)
 		return;
 	gettimeofday(&timer[1], NULL);
 	timersub(&timer[1], &timer[0], &timer[2]);
 }
 
-void output_pretty(int fd, struct test *test) {
+void
+output_pretty(int fd, struct test *test) {
 }
 
-void output_yaml(FILE *fd, struct test *test) {
+void
+output_yaml(FILE * fd, struct test *test) {
+	uint8_t err = 0;
+
 	fprintf(fd, "-\n  code: \"%s\"\n", test->code);
 
 	if (test->stacktop_expected != 0) {
@@ -84,38 +91,39 @@ void output_yaml(FILE *fd, struct test *test) {
 
 	fputs("  stats:\n", fd);
 	fprintf(fd,
-	    "    compile:\n"
-	    "      iterations: %" PRIu32 "\n"
-	    "      high: %" PRIu32 ".%" PRIu32 "\n"
-	    "      low: %" PRIu32 ".%" PRIu32 "\n"
-	    "      total: %" PRIu32 ".%" PRIu32 "\n",
-			test->results.compile_iterations,
-			(uint32_t)test->results.compile_tv.high.tv_sec,
-			(uint32_t)test->results.compile_tv.high.tv_usec,
-			(uint32_t)test->results.compile_tv.low.tv_sec,
-			(uint32_t)test->results.compile_tv.low.tv_usec,
-			(uint32_t)test->results.compile_tv.total.tv_sec,
-			(uint32_t)test->results.compile_tv.total.tv_usec);
+		"    compile:\n"
+		"      iterations: %" PRIu32 "\n"
+		"      high: %" PRIu32 ".%" PRIu32 "\n"
+		"      low: %" PRIu32 ".%" PRIu32 "\n"
+		"      total: %" PRIu32 ".%" PRIu32 "\n",
+		test->results.compile_iterations,
+		(uint32_t) test->results.compile_tv.high.tv_sec,
+		(uint32_t) test->results.compile_tv.high.tv_usec,
+		(uint32_t) test->results.compile_tv.low.tv_sec,
+		(uint32_t) test->results.compile_tv.low.tv_usec,
+		(uint32_t) test->results.compile_tv.total.tv_sec,
+		(uint32_t) test->results.compile_tv.total.tv_usec);
 	fprintf(fd,
-	    "    run:\n"
-	    "      iterations: %" PRIu32 "\n"
-	    "      frames: %" PRIu32 "\n"
-	    "      high: %" PRIu32 ".%" PRIu32 "\n"
-	    "      low: %" PRIu32 ".%" PRIu32 "\n"
-	    "      total: %" PRIu32 ".%" PRIu32 "\n",
-			test->results.run_iterations,
-			test->results.frames,
-			(uint32_t)test->results.run_tv.high.tv_sec,
-			(uint32_t)test->results.run_tv.high.tv_usec,
-			(uint32_t)test->results.run_tv.low.tv_sec,
-			(uint32_t)test->results.run_tv.low.tv_usec,
-			(uint32_t)test->results.run_tv.total.tv_sec,
-			(uint32_t)test->results.run_tv.total.tv_usec);
+		"    run:\n"
+		"      iterations: %" PRIu32 "\n"
+		"      frames: %" PRIu32 "\n"
+		"      high: %" PRIu32 ".%" PRIu32 "\n"
+		"      low: %" PRIu32 ".%" PRIu32 "\n"
+		"      total: %" PRIu32 ".%" PRIu32 "\n",
+		test->results.run_iterations,
+		test->results.frames,
+		(uint32_t) test->results.run_tv.high.tv_sec,
+		(uint32_t) test->results.run_tv.high.tv_usec,
+		(uint32_t) test->results.run_tv.low.tv_sec,
+		(uint32_t) test->results.run_tv.low.tv_usec,
+		(uint32_t) test->results.run_tv.total.tv_sec,
+		(uint32_t) test->results.run_tv.total.tv_usec);
 
 	fputs("\n", fd);
 }
 
-void timer_result(struct timeval *tv, struct tv_avg *y) {
+void
+timer_result(struct timeval *tv, struct tv_avg *y) {
 	if (timercmp(tv, &y->high, >))
 		y->high = *tv;
 	else if (timercmp(tv, &y->low, <))
@@ -123,18 +131,19 @@ void timer_result(struct timeval *tv, struct tv_avg *y) {
 	timeradd(&y->total, tv, &y->total);
 }
 
-/* TODO: Use the test_result struct for the result */
-int runtest(struct test *test) {
+int
+runtest(struct test *test) {
 	size_t frame_count;
 	struct timeval *run_time;
 	//struct test_result res;
 	int err = 0;
 	uint32_t iter, repeat = 100;
+
 	test_init(test, repeat);
 	run_time = calloc(3, sizeof(struct timeval));
 
 	vm_init();
-	for (iter=0; iter < repeat; iter++) {
+	for (iter = 0; iter < repeat; iter++) {
 		timer_start(run_time);
 		vm_compile(test->code);
 		timer_stop(run_time);
@@ -142,7 +151,7 @@ int runtest(struct test *test) {
 	}
 	test->results.compile_iterations = iter;
 
-	for (iter=0; iter < repeat; iter++) {
+	for (iter = 0; iter < repeat; iter++) {
 		frame_count = 0;
 		timer_start(run_time);
 		while (vm.stopped == 0)
@@ -169,7 +178,8 @@ int runtest(struct test *test) {
 	return err;
 }
 
-int main() {
+int
+main() {
 	/* TODO: i guess we need a little bit more coverage here */
 	struct test tests[] = {
 		/* Integer tests */

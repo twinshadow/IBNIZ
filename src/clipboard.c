@@ -3,17 +3,20 @@
 #if defined(WIN32)
 #include <windows.h>
 
-void clipboard_load()
-{
+void
+clipboard_load() {
 	HGLOBAL data;
+	char *t;
+	int lgt;
+
 	if (!IsClipboardFormatAvailable(CF_TEXT))
 		return;
 	if (!OpenClipboard(NULL))
 		return;
 	data = GetClipboardData(CF_TEXT);
 	if (data) {
-		char *t = (char *)GlobalLock(data);
-		int lgt = strlen(t);
+		t = (char *)GlobalLock(data);
+		lgt = strlen(t);
 		if (clipboard)
 			free(clipboard);
 		clipboard = malloc(strlen(t) + 1);
@@ -23,8 +26,8 @@ void clipboard_load()
 	CloseClipboard();
 }
 
-void clipboard_store()
-{
+void
+clipboard_store() {
 	HGLOBAL buffer;
 
 	if (!OpenClipboard(NULL))
@@ -42,6 +45,7 @@ void clipboard_store()
 	SetClipboardData(CF_TEXT, buffer);
 	CloseClipboard();
 }
+
 #elif defined(X11)
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
@@ -53,8 +57,8 @@ struct {
 	Atom cbatom;
 } clipbrd;
 
-void clipboard_init()
-{
+void
+clipboard_init() {
 	if (!clipbrd.cbatom) {
 		SDL_GetWMInfo(&clipbrd.swi);
 		if (!clipbrd.swi.info.x11.display)
@@ -66,8 +70,8 @@ void clipboard_init()
 	}
 }
 
-char *getcbtext(XSelectionEvent * e)
-{
+char *
+getcbtext(XSelectionEvent * e) {
 	Atom type;
 	int format, lgt;
 	unsigned long nitems;
@@ -108,9 +112,11 @@ char *getcbtext(XSelectionEvent * e)
 	return xdata;
 }
 
-char *readX11clipboard()
-{
+char *
+readX11clipboard() {
 	Window owner;
+	XEvent e;
+	int i;
 
 	owner = XGetSelectionOwner(clipbrd.swi.info.x11.display, XA_PRIMARY);
 
@@ -118,14 +124,11 @@ char *readX11clipboard()
 		return NULL;
 
 	if (owner != None) {
-		int i = 64;
-
 		XConvertSelection(clipbrd.swi.info.x11.display, XA_PRIMARY, XA_STRING,
 		    clipbrd.cbatom, clipbrd.swi.info.x11.window, CurrentTime);
 		XFlush(clipbrd.swi.info.x11.display);
 
-		for (; i; i--) {
-			XEvent e;
+		for (i = 64; i; i--) {
 			XNextEvent(clipbrd.swi.info.x11.display, &e);
 			if (e.type == SelectionNotify) {
 				if (e.xselection.property == None)
@@ -137,9 +140,10 @@ char *readX11clipboard()
 		return NULL;
 }
 
-void clipboard_load()
-{
+void
+clipboard_load() {
 	char *cbt;
+
 	clipboard_init();
 	if (!clipbrd.cbatom)
 		return;
@@ -153,8 +157,8 @@ void clipboard_load()
 	}
 }
 
-void clipboard_store()
-{
+void
+clipboard_store() {
 	clipboard_init();
 	if (!clipbrd.cbatom)
 		return;
@@ -165,12 +169,14 @@ void clipboard_store()
 	clipbrd.swi.info.x11.unlock_func();
 }
 
-void clipboard_handlesysreq(SDL_Event * e)
-{
+void
+clipboard_handlesysreq(SDL_Event * e) {
 	XEvent res;
+
 	if (e->syswm.msg->event.xevent.type == SelectionRequest) {
 		XSelectionRequestEvent *req =
 		&(e->syswm.msg->event.xevent.xselectionrequest);
+
 		if (req->target == XA_STRING) {
 			XChangeProperty(clipbrd.swi.info.x11.display, req->requestor,
 					req->property, XA_STRING, 8, PropModeReplace, clipboard, strlen(clipboard));
@@ -187,13 +193,15 @@ void clipboard_handlesysreq(SDL_Event * e)
 		XFlush(clipbrd.swi.info.x11.display);
 	}
 }
+
 #else
 
-void clipboard_load()
-{
+void
+clipboard_load() {
 }
 
-void clipboard_store()
-{
+void
+clipboard_store() {
 }
-#endif
+
+#endif				/* defined(WIN32) || defined(X11) */

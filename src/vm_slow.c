@@ -6,11 +6,12 @@
 
 void pmv_setfunc();
 
-uint32_t getdatabits(int n)
-{
+uint32_t
+getdatabits(int n) {
 	int s = (32 - n - (vm.dataptr & 31));
 	uint32_t mask;
 	uint32_t a;
+
 	if (n <= 0 || vm.datalgt <= 0)
 		return 0;
 	mask = (1 << n) - 1;
@@ -23,8 +24,8 @@ uint32_t getdatabits(int n)
 	return a;
 }
 
-void initstatecounters()
-{
+void
+initstatecounters() {
 	vm.spchange[0] = vm.spchange[1] = 0;
 	vm.wcount[0] = vm.wcount[1] = 0;
 	vm.currentwcount[0] = vm.currentwcount[1] = 0;
@@ -33,22 +34,22 @@ void initstatecounters()
 	//vm.specialcontextstep = 1;
 }
 
-void vm_compile(char *src)
-{
+void
+vm_compile(char *src) {
 	/* no other compilation in vm_slow! */
 	compiler_parse(src);
 	vm.specialcontextstep = 1;
 	//initstatecounters();
 }
 
-void vm_init()
-{
+void
+vm_init() {
 	/* video context */
 	vm.stack = vm.mem + 0xE0000;
 	vm.stackmask = 0x1ffff;
 	vm.sp = 0;
 
-	vm.rstack = (uint32_t*)(vm.mem + 0xCC000);
+	vm.rstack = (uint32_t *) (vm.mem + 0xCC000);
 	vm.rstackmask = 0x3FFF;
 	vm.rsp = 0;
 
@@ -58,7 +59,7 @@ void vm_init()
 	vm.cosp = 1;
 
 	/* to avoid audio skipping bug at start */
-	vm.corstack = (uint32_t*)(vm.mem + 0xC8000);
+	vm.corstack = (uint32_t *) (vm.mem + 0xC8000);
 	vm.corstackmask = 0x3FFF;
 	vm.corsp = 0;
 
@@ -81,6 +82,7 @@ void vm_init()
 		memset(vm.mem, 0, MEMSIZE * sizeof(uint32_t));
 	else {
 		int i;
+
 		vm.dataptr = 0;
 		for (i = 0; i < MEMSIZE; i++)
 			vm.mem[i] = getdatabits(32);
@@ -91,8 +93,8 @@ void vm_init()
 	vm.pmv_func();
 }
 
-void switchmediacontext()
-{
+void
+switchmediacontext() {
 	SWAP(int32_t *, vm.stack, vm.costack);
 	SWAP(uint32_t, vm.sp, vm.cosp);
 	SWAP(uint32_t, vm.stackmask, vm.costackmask);
@@ -103,10 +105,11 @@ void switchmediacontext()
 	pmv_setfunc();
 }
 
-void stepmediacontext(int skippoint, int op)
-{
+void
+stepmediacontext(int skippoint, int op) {
 	int16_t spc0 = vm.spchange[vm.mediacontext];
 	int16_t spc1 = vm.sp - vm.prevsp[vm.mediacontext];
+
 	if (abs(spc1) < 1024) {
 		vm.spchange[vm.mediacontext] = spc1;
 		if (spc0 == spc1) {
@@ -129,11 +132,12 @@ void stepmediacontext(int skippoint, int op)
 	}
 }
 
-void flipvideopage()
-{
+void
+flipvideopage() {
 	vm.visiblepage = ((vm.sp >> 16) & 1) ^ 1;
 	for (;;) {
 		uint32_t newt = gettimevalue();
+
 		if (newt != vm.videotime)
 			break;
 		waitfortimechange();
@@ -141,8 +145,8 @@ void flipvideopage()
 	vm.videotime = gettimevalue();
 }
 
-void pmv_audio()
-{
+void
+pmv_audio() {
 	vm.currentwcount[vm.mediacontext]++;
 	if (!vm.sp)		/* todo we need something better */
 		vm.audiotime += 64;
@@ -150,9 +154,10 @@ void pmv_audio()
 	vm.stack[vm.sp] = vm.audiotime * 65536 + vm.sp * 64;
 }
 
-void pmv_video_t()
-{
+void
+pmv_video_t() {
 	int p = vm.sp & 65535;
+
 	vm.currentwcount[vm.mediacontext]++;
 	if (!p)
 		flipvideopage();
@@ -160,9 +165,10 @@ void pmv_video_t()
 	vm.stack[vm.sp] = (vm.videotime << 16) | p;
 }
 
-void pmv_video_txy()
-{
+void
+pmv_video_txy() {
 	int p = vm.sp & 65535;
+
 	vm.currentwcount[vm.mediacontext]++;
 	if (vm.visiblepage == (vm.sp >> 16))
 		flipvideopage();
@@ -174,8 +180,8 @@ void pmv_video_txy()
 	vm.stack[vm.sp] = ((p & 255) << 9) - 0x10000;
 }
 
-void pmv_setfunc()
-{
+void
+pmv_setfunc() {
 	if (vm.mediacontext == 1)
 		vm.pmv_func = pmv_audio;
 	else if (vm.videomode == 0)
@@ -184,8 +190,8 @@ void pmv_setfunc()
 		vm.pmv_func = pmv_video_t;
 }
 
-void pushmediavariables()
-{
+void
+pushmediavariables() {
 	if (vm.mediacontext == 0) {
 		int p = vm.sp & 65535;
 
@@ -216,9 +222,10 @@ void pushmediavariables()
 	}
 }
 
-int vm_run()
-{
+int
+vm_run() {
 	int cycles;
+
 	if (vm.stopped)
 		return 0;
 
@@ -348,6 +355,7 @@ int vm_run()
 		case ('x'):	/* (b a -- a b) // forth: SWAP */
 			{
 				int32_t tmp = *a;
+
 				b = &vm.stack[(vm.sp - 1) & vm.stackmask];
 				*a = *b;
 				*b = tmp;
@@ -357,6 +365,7 @@ int vm_run()
 		case ('v'):	/* (c b a -- b a c) // forth: ROT */
 			{
 				int32_t a_v = *a, *c;
+
 				b = &vm.stack[(vm.sp - 1) & vm.stackmask];
 				c = &vm.stack[(vm.sp - 2) & vm.stackmask];
 				*a = *c;
@@ -462,6 +471,7 @@ int vm_run()
 		case ('L'):	/* loop */
 			{
 				uint32_t *i = &vm.rstack[(vm.rsp - 1) & vm.rstackmask];
+
 				(*i)--;
 				if (*i == 0)
 					MOVERSP(-2);
@@ -482,6 +492,7 @@ int vm_run()
 			{
 				int point = *a % vm.codelgt;	/* !!! addressing will
 								   change */
+
 				MOVESP(-1);
 				vm.ip = vm.parsed_code + point;
 			}

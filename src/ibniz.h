@@ -30,25 +30,21 @@
 #endif
 
 /* i/o stuff used by vm */
-
 uint32_t gettimevalue();
 int getuserchar();
 void waitfortimechange();
 
 /* vm-specific */
-
 void vm_compile(char *src);
 void vm_init();
 int vm_run();
 void switchmediacontext();
 
 /* compiler */
-
 void compiler_parse(char *src);
 int compiler_compile();
 
 /* clipboard */
-
 GLOBAL char *clipboard;
 void clipboard_load();
 void clipboard_store();
@@ -59,6 +55,7 @@ void clipboard_store();
 #define  CLIPBOARD_X11
 #include <SDL/SDL.h>
 void clipboard_handlesysreq(SDL_Event * e);
+
 #else
 #define  CLIPBOARD_NONE
 #endif

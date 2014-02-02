@@ -29,8 +29,8 @@ GLOBAL struct {
 
 	/* i/o stuff */
 	uint8_t mediacontext;	/* 0=video, 1=audio, 2=stdio */
-	uint8_t videomode;		/* 0=txy, 1=t */
-	uint8_t audiomode;		/* 0=mono, 1=stereo */
+	uint8_t videomode;	/* 0=txy, 1=t */
+	uint8_t audiomode;	/* 0=mono, 1=stereo */
 	uint8_t preferredmediacontext;
 	uint8_t visiblepage;
 	uint8_t stopped;
@@ -84,4 +84,4 @@ GLOBAL struct {
 
 #define SWAP(t,a,b) { t tmp=(a);(a)=(b);(b)=tmp; }
 
-#endif /* VM_H */
+#endif				/* ifndef VM_H */

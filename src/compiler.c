@@ -14,27 +14,28 @@
 //
 #define COMPILERDEBUG
 
-void compiler_parse(char *src)
-{
+void
+compiler_parse(char *src) {
 	char *d = vm.parsed_code;
 	uint32_t *hd = vm.parsed_hints;
 	uint32_t num;
-	char *s, nummode = 0, shift = 0;
-	int i;
+	char *s, nummode = 0, shift = 0, src_step, digit, code_frame;
+	int i, data_step, pad, digitsz, data_wrap, seek0, seek1, skip_frame,
+	 pad_inc, skip;
+
 	s = src;
 
 	/* parse immediates, skip comments & whitespaces */
-
 	for (;;) {
-		char a = *s++;
-		if ((!a) || (a >= '!' && a <= '~')) {
-			if (a == '.' || (a >= '0' && a <= '9') || (a >= 'A' && a <= 'F')) {
+		src_step = *s++;
+		if ((!src_step) || (src_step >= '!' && src_step <= '~')) {
+			if (src_step == '.' || (src_step >= '0' && src_step <= '9') || (src_step >= 'A' && src_step <= 'F')) {
 				if (nummode == 0) {
 					num = 0;
 					shift = 16;
 					nummode = 1;
 				}
-				if (a == '.') {
+				if (src_step == '.') {
 					if (nummode == 2) {
 						*d++ = OP_LOADIMM;
 						*hd++ = num;
@@ -43,7 +44,8 @@ void compiler_parse(char *src)
 					nummode = 2;
 					shift = 12;
 				} else {
-					char digit = (a >= 'A' ? a - 'A' + 10 : a - '0');
+					digit = (src_step >= 'A' ? src_step - 'A' + 10 : src_step - '0');
+
 					if (nummode == 1)
 						num = ROL(num, 4);
 					num |= digit << shift;
@@ -56,19 +58,19 @@ void compiler_parse(char *src)
 					*hd++ = num;
 					nummode = 0;
 				}
-				if (a == '\\') {
+				if (src_step == '\\') {
 					while (*s && *s != '\n')
 						s++;
 					if (!s)
 						break;
 					s++;
 				} else {
-					if (a != ',') {
-						if (a == '$')
-							a = '\0';
-						*d++ = a;
+					if (src_step != ',') {
+						if (src_step == '$')
+							src_step = '\0';
+						*d++ = src_step;
 						*hd++ = 0;
-						if (a == '\0')
+						if (src_step == '\0')
 							break;
 					}
 				}
@@ -77,23 +79,24 @@ void compiler_parse(char *src)
 	}
 
 	/* parse data */
-
 	vm.datalgt = 0;
 	if (s[-1] == '$') {
-		int digitsz = 4;
+		digitsz = 4;
+
 		vm.parsed_data[0] = 0;
 		for (;;) {
-			int a = *s++;
-			if (!a)
+			data_step = *s++;
+
+			if (!data_step)
 				break;
-			if (a == '\\') {
+			if (data_step == '\\') {
 				while (*s && *s != '\n')
 					s++;
 				if (!s)
 					break;
 				s++;
 			} else
-				switch (a) {
+				switch (data_step) {
 				case ('b'):
 					digitsz = 1;
 					break;
@@ -112,7 +115,7 @@ void compiler_parse(char *src)
 				case ('D'):
 				case ('E'):
 				case ('F'):
-					a = a - 'A' + 10 + '0';
+					data_step -= 'A' + 10 + '0';
 				case ('0'):
 				case ('1'):
 				case ('2'):
@@ -123,30 +126,31 @@ void compiler_parse(char *src)
 				case ('7'):
 				case ('8'):
 				case ('9'):
-					a -= '0';
-					a &= ((1 << digitsz) - 1);
-					{
-						int s = (32 - digitsz - (vm.datalgt & 31));
-						if (s >= 0) {
-							vm.parsed_data[vm.datalgt >> 5] |= a << s;
-							vm.parsed_data[(vm.datalgt >> 5) + 1] = 0;
-						} else {
-							vm.parsed_data[vm.datalgt >> 5] |= a >> (0 - s);
-							vm.parsed_data[(vm.datalgt >> 5) + 1] = a << (32 + s);
-						}
-						vm.datalgt += digitsz;
+					data_step -= '0';
+					data_step &= ((1 << digitsz) - 1);
+					data_wrap = (32 - digitsz - (vm.datalgt & 31));
+
+					if (data_wrap >= 0) {
+						vm.parsed_data[vm.datalgt >> 5] |= data_step << data_wrap;
+						vm.parsed_data[(vm.datalgt >> 5) + 1] = 0;
+					} else {
+						vm.parsed_data[vm.datalgt >> 5] |= data_step >> (0 - data_wrap);
+						vm.parsed_data[(vm.datalgt >> 5) + 1] = data_step << (32 + data_wrap);
 					}
+					vm.datalgt += digitsz;
 					break;
 				}
 		}
 		/* fill last 2 words to ease fetch */
 		{
-			int pad = vm.datalgt & 31;
+			pad = vm.datalgt & 31;
+
 			if (pad) {
-				int i = pad;
-				while (i < 32) {
-					vm.parsed_data[vm.datalgt >> 5] |= vm.parsed_data[0] >> i;
-					i *= 2;
+				pad_inc = pad;
+
+				while (pad_inc < 32) {
+					vm.parsed_data[vm.datalgt >> 5] |= vm.parsed_data[0] >> pad_inc;
+					pad_inc *= 2;
 				}
 			}
 			if (!pad)
@@ -161,38 +165,42 @@ void compiler_parse(char *src)
 	/* precalculate skip points */
 	vm.codelgt = d - vm.parsed_code;
 	for (i = 0;; i++) {
-		int j = i + 1, seek0 = 0, seek1 = 0;
-		char a = vm.parsed_code[i];
-		if (a == '\0') {
+		skip_frame = i + 1;
+		seek0 = seek1 = 0;
+		code_frame = vm.parsed_code[i];
+
+		if (code_frame == '\0') {
 			seek0 = 'M';
-			j = 0;
+			skip_frame = 0;
 		}
-		if (a == 'M')
+		if (code_frame == 'M')
 			seek0 = 'M';
-		else if (a == '?') {
+		else if (code_frame == '?') {
 			seek0 = ';';
 			seek1 = ':';
-		} else if (a == ':')
+		} else if (code_frame == ':')
 			seek0 = ';';
-		else if (a == '{') {
+		else if (code_frame == '{') {
 			seek0 = '}';
 		}
 		if (seek0) {
-			for (;; j++) {
-				int a = vm.parsed_code[j];
-				if (a == '\0' || a == seek0 || a == seek1) {
-					if (i == j || a == 0)
+			for (;; skip_frame++) {
+				skip = vm.parsed_code[skip_frame];
+
+				if (skip == '\0' || skip == seek0 || skip == seek1) {
+					if (i == skip_frame || skip == 0)
 						vm.parsed_hints[i] = 0;
 					else
-						vm.parsed_hints[i] = j + 1;
+						vm.parsed_hints[i] = skip_frame + 1;
 					break;
 				}
 			}
 		}
-		if (a == '\0')
+		if (code_frame == '\0')
 			break;
 	}
 }
+
 /** utility functions for code generator **/
 
 #ifndef NONATIVECODE
@@ -230,14 +238,15 @@ struct {
 	/* structure for label-address mapping (store labels as co0-relative!) */
 } gen;
 
-void freereg(int reg)
-{
+void
+freereg(int reg) {
 	gen.usedregs &= ~(1 << reg);
 }
 
-void checkregusage()
-{
+void
+checkregusage() {
 	int i = 0;
+
 	gen.usedregs = 0;
 	for (; i <= gen.gsp; i++)
 		if (gen.gs[i].type == GSV_REG)
@@ -253,10 +262,11 @@ void checkregusage()
 	*/
 }
 
-void flushstackbottom()
-{
+void
+flushstackbottom() {
 	if (gen.gsp >= 0) {
 		int i;
+
 		if (gen.gs[0].type == GSV_REG)
 			gen_push_reg(gen.gs[0].val);
 		else
@@ -268,15 +278,15 @@ void flushstackbottom()
 	}
 }
 
-int allocreg_withprefs(int preferred, int forbidden)
-{
+int
+allocreg_withprefs(int preferred, int forbidden) {
 	int i;
 	int excluded;
 
 #ifdef COMPILERDEBUG
 	printf("// alloc: prefer %x forbid %x used %x\n",
 	       preferred, forbidden, gen.usedregs);
-#endif
+#endif				/* ifdef COMPILERDEBUG */
 
 	while ((gen.usedregs | forbidden) == (1 << NUMREGS) - 1)
 		flushstackbottom();
@@ -301,20 +311,20 @@ int allocreg_withprefs(int preferred, int forbidden)
 	exit(-1);
 }
 
-int allocreg()
-{
+int
+allocreg() {
 	return allocreg_withprefs(0, 0);
 }
 
 
-void gen_flushpartialstack(int howmany)
-{
+void
+gen_flushpartialstack(int howmany) {
 	for (; howmany > 0; howmany--)
 		flushstackbottom();
 }
 
-void growstack(int type, uint32_t val)
-{
+void
+growstack(int type, uint32_t val) {
 	gen.gsp++;
 	if (gen.gsp >= GENSTACKDEPTH)
 		gen_flushpartialstack(3);
@@ -322,17 +332,18 @@ void growstack(int type, uint32_t val)
 	gen.gs[gen.gsp].val = val;
 }
 
-void growstackri(int r, int32_t i)
-{
+void
+growstackri(int r, int32_t i) {
 	if (r < 0)
 		growstack(GSV_ABS, i);
 	else
 		growstack(GSV_REG, r);
 }
 
-int popintoreg()
-{
+int
+popintoreg() {
 	int r;
+
 	if (gen.gsp >= 0) {
 		fprintf(stderr, "popintoreg: gsp>=0");
 		exit(-1);
@@ -343,8 +354,8 @@ int popintoreg()
 	return r;
 }
 
-void stateinit()
-{
+void
+stateinit() {
 	gen.gsp = -1;
 	gen.grsp = -1;
 	//gen.xreg = gen.yreg = gen.treg = -1;
@@ -352,9 +363,10 @@ void stateinit()
 	//gen.usedregswithtyx = 0;
 }
 
-int popstackval(int32_t * i)
-{
+int
+popstackval(int32_t * i) {
 	int r;
+
 	if (gen.gsp < 0)
 		r = popintoreg();
 	else {
@@ -369,8 +381,8 @@ int popstackval(int32_t * i)
 	return r;
 }
 
-void popsv(gsv_t * ret)
-{
+void
+popsv(gsv_t * ret) {
 	if (gen.gsp < 0) {
 		ret->type = GSV_REG;
 		ret->val = popintoreg();
@@ -380,18 +392,16 @@ void popsv(gsv_t * ret)
 		gen.gsp--;
 	}
 }
-/*** user-callable ***/
 
+/*** user-callable ***/
 void
-flushstack()
-{
+flushstack() {
 	gen_flushpartialstack(gen.gsp + 1);
 }
-/* stack ops */
 
+/* stack ops */
 void
-gen_pop()
-{
+gen_pop() {
 	if (gen.gsp >= 0)
 		gen.gsp--;
 	else
@@ -399,21 +409,21 @@ gen_pop()
 }
 
 void
-gen_dup()
-{
+gen_dup() {
 	if (gen.gsp >= 0) {
 		growstack(gen.gs[gen.gsp].type, gen.gs[gen.gsp].val);
 	} else {
 		int r = allocreg();
+
 		growstack(GSV_REG, r);
 		gen_dup_reg(r);
 	}
 }
 
 void
-gen_swap()
-{
+gen_swap() {
 	gsv_t v1, v0;
+
 	popsv(&v0);
 	popsv(&v1);
 	growstack(v0.type, v0.val);
@@ -421,9 +431,9 @@ gen_swap()
 }
 
 void
-gen_trirot()
-{
+gen_trirot() {
 	gsv_t v2, v1, v0;
+
 	popsv(&v0);
 	popsv(&v1);
 	popsv(&v2);
@@ -433,27 +443,24 @@ gen_trirot()
 }
 
 void
-gen_pick()
-{
+gen_pick() {
 }
 
 void
-gen_bury()
-{
+gen_bury() {
 }
 
 /* loadimm */
 void
-gen_loadimm(int val)
-{
+gen_loadimm(int val) {
 	growstack(GSV_ABS, val);
 }
 
 /* arithmetic */
 /* use gen_##name##_reg_reg_reg(t,s0,s1); */
 
-void binop_getsv(gsv_t * t, gsv_t * s1, gsv_t * s0, int is_commutative)
-{
+void
+binop_getsv(gsv_t * t, gsv_t * s1, gsv_t * s0, int is_commutative) {
 	popsv(s0);
 	popsv(s1);
 	checkregusage();
@@ -476,8 +483,8 @@ void binop_getsv(gsv_t * t, gsv_t * s1, gsv_t * s0, int is_commutative)
 	}
 }
 
-void unop_getsv(gsv_t * t, gsv_t * s)
-{
+void
+unop_getsv(gsv_t * t, gsv_t * s) {
 	popsv(s);
 	checkregusage();
 	if (s->type != GSV_REG) {
@@ -488,116 +495,101 @@ void unop_getsv(gsv_t * t, gsv_t * s)
 	}
 }
 
-#define BINOP_C(name,immimm) \
-void \
-gen_##name () \
-{ \
-  gsv_t t,s1,s0; \
-  binop_getsv(&t,&s1,&s0,1); \
-  if(t.type==GSV_ABS) \
-  { \
-    uint32_t i1=s1.val,i0=s0.val; \
-    growstack(GSV_ABS,immimm); \
-  } \
-  else \
-  { \
-    growstack(GSV_REG,t.val); \
-    if(s0.type==GSV_REG) \
-      gen_##name##_reg_reg_reg(t.val,s1.val,s0.val); \
-    else \
-      gen_##name##_reg_reg_imm(t.val,s1.val,s0.val); \
-  } \
+#define BINOP_C(__name, __immimm)                                          \
+void                                                                       \
+gen_##__name () {                                                          \
+	gsv_t t, s1, s0;                                                   \
+	binop_getsv(&t, &s1, &s0, 1);                                      \
+	if (t.type==GSV_ABS) {                                             \
+		uint32_t i1=s1.val, i0=s0.val;                             \
+		growstack(GSV_ABS, __immimm);                              \
+	}                                                                  \
+	else {                                                             \
+		growstack(GSV_REG, t.val);                                 \
+		if (s0.type==GSV_REG)                                      \
+			gen_##__name##_reg_reg_reg(t.val, s1.val, s0.val); \
+		else                                                       \
+			gen_##__name##_reg_reg_imm(t.val, s1.val, s0.val); \
+	}                                                                  \
 }
 
-#define BINOP_NC(name,immimm) \
-void \
-gen_##name () \
-{ \
-  gsv_t t,s1,s0; \
-  binop_getsv(&t,&s1,&s0,0); \
-  if(t.type==GSV_ABS) \
-  { \
-    uint32_t i1=s1.val,i0=s0.val; \
-    growstack(GSV_ABS,immimm); \
-  } \
-  else \
-  { \
-    growstack(GSV_REG,t.val); \
-    if(s1.type==GSV_REG) \
-    { \
-      if(s0.type==GSV_REG) \
-        gen_##name##_reg_reg_reg(t.val,s1.val,s0.val); \
-      else \
-        gen_##name##_reg_reg_imm(t.val,s1.val,s0.val); \
-    } \
-    else \
-    { \
-      gen_mov_reg_imm(t.val,s1.val); \
-      gen_##name##_reg_reg_reg(t.val,t.val,s0.val); \
-    } \
-  } \
+#define BINOP_NC(__name, __immimm)                                                 \
+void                                                                               \
+gen_##__name () {                                                                  \
+	gsv_t t, s1, s0;                                                           \
+	binop_getsv(&t, &s1, &s0, 0);                                              \
+	if (t.type==GSV_ABS) {                                                     \
+		uint32_t i1=s1.val, i0=s0.val;                                     \
+		growstack(GSV_ABS, __immimm);                                      \
+	}                                                                          \
+	else {                                                                     \
+		growstack(GSV_REG, t.val);                                         \
+		if (s1.type==GSV_REG) {                                            \
+			if (s0.type==GSV_REG)                                      \
+				gen_##__name##_reg_reg_reg(t.val, s1.val, s0.val); \
+			else                                                       \
+				gen_##__name##_reg_reg_imm(t.val, s1.val, s0.val); \
+		}                                                                  \
+		else {                                                             \
+			gen_mov_reg_imm(t.val, s1.val);                            \
+			gen_##__name##_reg_reg_reg(t.val, t.val, s0.val);          \
+		}                                                                  \
+	}                                                                          \
 }
 
-BINOP_C(add, i1 + i0)
-BINOP_NC(sub, i1 - i0)
-BINOP_C(mul, IBNIZ_MUL(i1, i0))
-BINOP_NC(div, IBNIZ_DIV(i1, i0))
-BINOP_NC(mod, IBNIZ_MOD(i1, i0))
-BINOP_C(and, i1 & i0)
-BINOP_C(xor, i1 ^ i0)
-BINOP_C(or, i1 | i0)
-BINOP_NC(ror, IBNIZ_ROR(i1, i0))
-BINOP_NC(shl, IBNIZ_SHL(i1, i0))
-BINOP_NC(atan2, IBNIZ_ATAN2(i1, i0))
+BINOP_C(add, i1 + i0);
+BINOP_NC(sub, i1 - i0);
+BINOP_C(mul, IBNIZ_MUL(i1, i0));
+BINOP_NC(div, IBNIZ_DIV(i1, i0));
+BINOP_NC(mod, IBNIZ_MOD(i1, i0));
+BINOP_C(and, i1 & i0);
+BINOP_C(xor, i1 ^ i0);
+BINOP_C(or, i1 | i0);
+BINOP_NC(ror, IBNIZ_ROR(i1, i0));
+BINOP_NC(shl, IBNIZ_SHL(i1, i0));
+BINOP_NC(atan2, IBNIZ_ATAN2(i1, i0));
 
-#define UNOP(name,imm) \
-void \
-gen_##name () \
-{ \
-  gsv_t t,s; \
-  unop_getsv(&t,&s); \
-  if(t.type==GSV_ABS) { \
-    uint32_t i=s.val; \
-    growstack(GSV_ABS,imm); \
-  } \
-  else \
-  { \
-    growstack(GSV_REG,t.val); \
-    gen_##name##_reg_reg(t.val,s.val); \
-  } \
+#define UNOP(__name, __immimm)                        \
+void                                                  \
+gen_##__name () {                                     \
+	gsv_t t, s;                                   \
+	unop_getsv(&t, &s);                           \
+	if (t.type==GSV_ABS) {                        \
+		uint32_t i=s.val;                     \
+		growstack(GSV_ABS, __immimm);         \
+	}                                             \
+	else {                                        \
+		growstack(GSV_REG, t.val);            \
+		gen_##__name##_reg_reg(t.val, s.val); \
+	}                                             \
 }
 
-UNOP(neg, ~i)
-UNOP(sin, IBNIZ_SIN(i))
-UNOP(sqrt, IBNIZ_SQRT(i))
+UNOP(neg, ~i);
+UNOP(sin, IBNIZ_SIN(i));
+UNOP(sqrt, IBNIZ_SQRT(i));
 UNOP(isneg, IBNIZ_ISNEG(i));
 UNOP(ispos, IBNIZ_ISPOS(i));
 UNOP(iszero, IBNIZ_ISZERO(i));
-
 /*
-// we must harmonize post-if and post-else gs structure (and post-a and post-b as well)
-// cond IF  a ELSE b ENDIF c
-//        0  1    0 1     1
-// cond IF a ENDIF
-//        0 0     0
-// trivial: just flushstack() at these points (before if-jump, before else-jump, before endif-label)
-*/
+we must harmonize post-if and post-else gs structure (and post-a and post-b as well)
+cond IF  a ELSE b ENDIF c
+       0  1    0 1     1
+cond IF a ENDIF
+       0 0     0
+trivial: just flushstack() at these points (before if-jump, before else-jump, before endif-label)
 
-/*
-// when looping: harmonize stack state in both ends
-// a [ b ] c
-//    0 0
-*/
+when looping: harmonize stack state in both ends
+a [ b ] c
+   0 0
 
-/*
-// when jumping to subroutines:
-// A { xxx }
+when jumping to subroutines:
+A { xxx }
 */
 
 void
-gen_if(int skipto)
-{
+gen_if(int skipto) {
 	gsv_t cond;
+
 	popsv(&cond);
 	flushstack();
 	if (cond.type == GSV_REG) {
@@ -609,25 +601,23 @@ gen_if(int skipto)
 }
 
 void
-gen_else(int skipto)
-{
+gen_else(int skipto) {
 	flushstack();
 	gen_jmp_lab(skipto);
 	gen_label(gen.srcidx + 1);
 }
 
 void
-gen_endif()
-{
+gen_endif() {
 	flushstack();
 	gen_label(gen.srcidx + 1);
 }
 
 void
-gen_load()
-{
+gen_load() {
 	int r;
 	gsv_t address;
+
 	popsv(&address);
 	r = allocreg();
 	growstack(GSV_REG, r);
@@ -638,10 +628,10 @@ gen_load()
 }
 
 void
-gen_store()
-{
+gen_store() {
 	gsv_t address;
 	gsv_t value;
+
 	popsv(&address);
 	popsv(&value);
 	if (address.type == GSV_REG) {
@@ -658,8 +648,7 @@ gen_store()
 }
 
 void
-gen_do()
-{
+gen_do() {
 	flushstack();
 	gen_rpush_lab(gen.srcidx + 1);
 	gen_label(gen.srcidx + 1);
@@ -669,9 +658,9 @@ gen_do()
 }
 
 void
-gen_while()
-{
+gen_while() {
 	gsv_t cond;
+
 	popsv(&cond);
 	if (cond.type == GSV_REG) {
 		flushstack();
@@ -688,22 +677,21 @@ gen_while()
 }
 
 void
-gen_loop()
-{
+gen_loop() {
 /*
-in c:
-if(--(rstack[(rsp-1)])) goto l0;
+	in c:
+	if(--(rstack[(rsp-1)])) goto l0;
 
-in x86:
-dec dword [rsp-4]
-jne .l0
+	in x86:
+	dec dword [rsp-4]
+	jne .l0
 */
 }
 
 void
-gen_rpush()
-{
+gen_rpush() {
 	gsv_t v;
+
 	popsv(&v);
 	if (v.type == GSV_REG)
 		gen_rpush_reg(v.val);
@@ -712,50 +700,47 @@ gen_rpush()
 }
 
 void
-gen_times()
-{
+gen_times() {
 	gen_rpush();
 	gen_do();
 }
 
 void
-gen_defsub()
-{
+gen_defsub() {
 /*
-in c:
-mem[X]=((&&l7)-main);
-goto l6; // use skip to seek it
-// (compiler: store current gs and clear gs)
-l2:
+	in c:
+	mem[X]=((&&l7)-main);
+	goto l6; // use skip to seek it
+	// (compiler: store current gs and clear gs)
+	l2:
 */
 }
 
 void
-gen_return()
-{
+gen_return() {
 /*
-flushstack();
-gen_jmp_rpop();
-compiler: restore stored gs
-l6:
+	flushstack();
+	gen_jmp_rpop();
+	compiler: restore stored gs
+	l6:
 */
 }
 
 void
-gen_rpop()
-{
+gen_rpop() {
 	int r = allocreg();
+
 	growstack(GSV_REG, r);
 	gen_rpop_reg(r);
 }
 
 void
-gen_whereami()
-{
+gen_whereami() {
 	//todo should also update ivars according to sp
-	    int t = allocreg();
+	int t = allocreg();
 	int y = allocreg();
 	int x = allocreg();
+
 	growstack(GSV_REG, t);
 	growstack(GSV_REG, y);
 	growstack(GSV_REG, x);
@@ -765,8 +750,7 @@ gen_whereami()
 }
 
 void
-gen_tyxloop_init()
-{
+gen_tyxloop_init() {
 	gen.gsp = -1;
 	//store treg0 yreg0 xreg0 to ensure loopability
 	/* gen.treg0=gen.treg=allocreg(); gen.yreg0=gen.yreg=allocreg();
@@ -782,9 +766,9 @@ gen_tyxloop_init()
 
 //real whereami can use any regs
 void
-gen_tyxloop_iterator()
-{
+gen_tyxloop_iterator() {
 	int t, y, x;
+
 	flushstack();
 	t = allocreg();
 	y = allocreg();
@@ -801,34 +785,36 @@ gen_tyxloop_iterator()
 }
 
 void
-gen_finish()
-{
+gen_finish() {
 	flushstack();
 	//gen_tyxloop_iterator();
 	gen_nativefinish();
 }
-#endif
 
-int compiler_compile()
-{
+#endif				/* ifndef NONATIVECODE */
+
+int
+compiler_compile() {
 #ifndef NONATIVECODE
 	int i, j;
+	char frame;
+
 	gen_tyxloop_init();
 	for (i = 0; i < vm.codelgt; i++) {
-		char a = vm.parsed_code[i];
+		frame = vm.parsed_code[i];
 		gen.srcidx = i;
 #ifdef COMPILERDEBUG
-		printf("// op %c, stack now: ", a);
+		printf("// op %c, stack now: ", frame);
 		for (j = 0; j <= gen.gsp; j++)
 			if (gen.gs[j].type == GSV_REG)
 				printf("%c ", 'A' + gen.gs[j].val);
 			else
 				printf("%x ", gen.gs[j].val);
 		printf("\n");
-#endif
+#endif				/* ifdef COMPILERDEBUG */
 		checkregusage();
 
-		switch (a) {
+		switch (frame) {
 		case (OP_LOADIMM):
 			gen_loadimm(vm.parsed_hints[i]);
 			break;
@@ -944,5 +930,5 @@ int compiler_compile()
 	return 0;
 #else
 	return -1;
-#endif
+#endif				/* ifndef NONATIVECODE */
 }

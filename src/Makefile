@@ -1,5 +1,6 @@
-uname_S:=$(shell uname -s)
-uname_O:=$(shell uname -o)
+TOP=		..
+uname_S:=	$(shell uname -s 2>/dev/null)
+uname_O:=	$(shell uname -o 2>/dev/null)
 
 # maybe works
 PLATFORM=	Makefile.in
@@ -20,3 +21,6 @@ PLATFORM=	Makefile.win
 endif
 
 include		${PLATFORM}
+
+indent:
+	${TOP}/scripts/indent.sh
