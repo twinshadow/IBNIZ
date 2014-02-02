@@ -40,7 +40,7 @@ gen_nativeinit() {
 	       "SDL_Overlay*o;\n"
 	       "\n"
 	       "int\n"
-	       "main(void)\n"
+	       "main()\n"
 	       "{\n"
 	       "  SDL_Init(SDL_INIT_VIDEO);\n"
 	       "  s=SDL_SetVideoMode(512,512,0,0);\n"
