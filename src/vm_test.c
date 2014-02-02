@@ -1,5 +1,6 @@
 #define IBNIZ_MAIN
 #include <sys/time.h>
+#include <sys/resource.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,8 +71,6 @@ output_pretty(int fd, struct test *test) {
 
 void
 output_yaml(FILE * fd, struct test *test) {
-	uint8_t err = 0;
-
 	fprintf(fd, "-\n  code: \"%s\"\n", test->code);
 
 	if (test->stacktop_expected != 0) {
