@@ -37,7 +37,7 @@ initstatecounters() {
 void
 vm_compile(char *src) {
 	/* no other compilation in vm_slow! */
-	compiler_parse(src);
+	compiler_parser(src);
 	vm.specialcontextstep = 1;
 	//initstatecounters();
 }

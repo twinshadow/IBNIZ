@@ -60,4 +60,6 @@ void clipboard_handlesysreq(SDL_Event * e);
 #define  CLIPBOARD_NONE
 #endif
 
+void compiler_parser(char *src);
+
 #endif

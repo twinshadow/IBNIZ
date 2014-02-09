@@ -1,6 +1,6 @@
 CC?=		gcc
 EXE?=		ibniz
-SRC=		vm_slow.c clipboard.c compiler.c
+SRC=		vm_slow.c clipboard.c compiler.c parser.c
 OBJ=		$(SRC:.c=.o)
 PROG=		${EXE} vmtest ibniz2c
 INTER=		font.i texts.i
@@ -36,7 +36,7 @@ ${PROG}:
 ibniz: ui_sdl.o ${OBJ}
 ibniz2c: CFLAGS+= -DIBNIZ2C
 ibniz2c: ibniz2c.o compiler.o
-vmtest: vm_test.o compiler.o vm_slow.o
+vmtest: vm_test.o compiler.o vm_slow.o parser.o
 
 font.i: font.pl
 	${PERL} font.pl > font.i
