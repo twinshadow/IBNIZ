@@ -8,19 +8,19 @@ void pmv_setfunc();
 
 uint32_t
 getdatabits(int n) {
-	int s = (32 - n - (vm.dataptr & 31));
+	int s = (32 - n - (vm.data_ptr & 31));
 	uint32_t mask;
 	uint32_t a;
 
-	if (n <= 0 || vm.datalgt <= 0)
+	if (n <= 0 || vm.data_len <= 0)
 		return 0;
 	mask = (1 << n) - 1;
 	if (s >= 0)
-		a = (vm.parsed_data[vm.dataptr >> 5] >> s) & mask;
+		a = (vm.parsed_data[vm.data_ptr >> 5] >> s) & mask;
 	else
-		a = ((vm.parsed_data[vm.dataptr >> 5] << (0 - s)) |
-		  (vm.parsed_data[(vm.dataptr >> 5) + 1] >> (32 + s))) & mask;
-	vm.dataptr = (vm.dataptr + n) % vm.datalgt;
+		a = ((vm.parsed_data[vm.data_ptr >> 5] << (0 - s)) |
+		  (vm.parsed_data[(vm.data_ptr >> 5) + 1] >> (32 + s))) & mask;
+	vm.data_ptr = (vm.data_ptr + n) % vm.data_len;
 	return a;
 }
 
@@ -70,7 +70,7 @@ vm_init() {
 	vm.videomode = 0;
 	vm.audiomode = 0;
 	vm.visiblepage = 1;
-	vm.dataptr = 0;
+	vm.data_ptr = 0;
 	vm.userinput = 0;
 	vm.stopped = 0;
 	vm.audiotime = vm.videotime = gettimevalue();
@@ -78,15 +78,15 @@ vm_init() {
 	initstatecounters();
 
 	/* zero out memory */
-	if (!vm.datalgt)
+	if (!vm.data_len)
 		memset(vm.mem, 0, MEMSIZE * sizeof(uint32_t));
 	else {
 		int i;
 
-		vm.dataptr = 0;
+		vm.data_ptr = 0;
 		for (i = 0; i < MEMSIZE; i++)
 			vm.mem[i] = getdatabits(32);
-		vm.dataptr = 0;
+		vm.data_ptr = 0;
 	}
 
 	pmv_setfunc();
@@ -469,20 +469,20 @@ vm_run() {
 			if (*i == 0)
 				MOVERSP(-2);
 			else
-				vm.ip = (vm.rstack[vm.rsp] % vm.codelgt) + vm.parsed_code;
+				vm.ip = (vm.rstack[vm.rsp] % vm.code_len) + vm.parsed_code;
 			break;
 
 		case (']'):	/* while */
 			MOVESP(-1);
 			if (*a)
-				vm.ip = (vm.rstack[vm.rsp] % vm.codelgt) + vm.parsed_code;
+				vm.ip = (vm.rstack[vm.rsp] % vm.code_len) + vm.parsed_code;
 			else
 				MOVERSP(-1);
 			break;
 
 		case ('J'):	/* jump */
 			{
-				point = *a % vm.codelgt;	/* !!! addressing will
+				point = *a % vm.code_len;	/* !!! addressing will
 								   change */
 				MOVESP(-1);
 				vm.ip = vm.parsed_code + point;
@@ -496,14 +496,14 @@ vm_run() {
 			vm.ip = vm.parsed_code + vm.parsed_hints[vm.ip - 1 - vm.parsed_code];
 			break;
 		case ('}'):	/* ret */
-			vm.ip = vm.parsed_code + (vm.rstack[vm.rsp] % vm.codelgt);
+			vm.ip = vm.parsed_code + (vm.rstack[vm.rsp] % vm.code_len);
 			MOVERSP(-1);
 			break;
 		case ('V'):	/* visit */
 			MOVESP(-1);
 			MOVERSP(1);
 			vm.rstack[vm.rsp] = vm.ip - vm.parsed_code;
-			vm.ip = ((vm.mem[ROL(*a, 16) & (MEMSIZE - 1)]) % vm.codelgt) + vm.parsed_code;
+			vm.ip = ((vm.mem[ROL(*a, 16) & (MEMSIZE - 1)]) % vm.code_len) + vm.parsed_code;
 			break;
 
 /*** PROGRAM CONTROL: Rstack manipulation ***/

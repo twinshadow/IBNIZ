@@ -7,7 +7,7 @@
 #define CYCLESPERRUN 10223
 #define OP_LOADIMM '0'
 
-GLOBAL struct {
+struct vm {
 	/* main register set */
 	char *ip;
 	int32_t *stack;
@@ -51,15 +51,17 @@ GLOBAL struct {
 
 	/* memory */
 	int32_t mem[MEMSIZE];
-	int codelgt;
-	int datalgt;
-	int dataptr;
+	int code_len;
+	int data_len;
+	int data_ptr;
 	uint32_t parsed_data[MAXDATASIZE];
 
 	/* compiler-related (also directly executed by vm_slow) */
 	char parsed_code[MAXCODESIZE];
 	uint32_t parsed_hints[MAXCODESIZE];
-} vm;
+};
+
+GLOBAL struct vm vm;
 
 #define ROL(a,s)   ((((uint32_t)(a))<<(s))|(((uint32_t)(a))>>(32-(s))))
 #define ROR(a,s)   ((((uint32_t)(a))>>(s))|(((uint32_t)(a))<<(32-(s))))
