@@ -1048,7 +1048,6 @@ main(int argc, char **argv) {
 	ui.opt_nonrealtime = 0;
 	ui.opt_playback = 0;
 	ui.opt_dumpmedia = 0;
-	ui.opt_nonrealtime = 0;
 	ui.osd_visible = 1;
 	argv++;
 	while (*argv) {
