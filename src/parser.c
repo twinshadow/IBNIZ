@@ -175,4 +175,5 @@ void
 compiler_parser(char *src) {
 	parse_immediates(src);
 	parse_skip();
+	puts(vm.parsed_code);
 }

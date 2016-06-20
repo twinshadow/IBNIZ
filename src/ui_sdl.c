@@ -1109,6 +1109,7 @@ main(int argc, char **argv) {
 	sdl.o = SDL_CreateYUVOverlay(256, 256, SDL_YUY2_OVERLAY, sdl.s);
 	SDL_WM_SetCaption("IBNIZ", "IBNIZ");
 
+	/*
 	{
 		SDL_AudioSpec as;
 
@@ -1120,6 +1121,7 @@ main(int argc, char **argv) {
 		SDL_OpenAudio(&as, NULL);
 		DEBUG("buffer size: %d\n", as.samples);
 	}
+	*/
 
 	vm_compile(codetoload);
 	ui.runstat = (autorun == 1) ? 1 : 0;

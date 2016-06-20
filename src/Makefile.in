@@ -35,7 +35,7 @@ ${PROG}:
 
 ibniz: ui_sdl.o ${OBJ}
 ibniz2c: CFLAGS+= -DIBNIZ2C
-ibniz2c: ibniz2c.o compiler.o
+ibniz2c: ibniz2c.o compiler.o parser.o
 vmtest: vm_test.o compiler.o vm_slow.o parser.o
 
 font.i: font.pl
